@@ -6,6 +6,7 @@
 #include <cstdint>
 #include <cstdio>
 #include <vector>
+#include <climits>
 
 using Vector = FS::Vector;
 using Vector2 = FS::Vector2;
