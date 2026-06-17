@@ -7,7 +7,14 @@
 #include <cstdio>
 #include <vector>
 #include <climits>
-
+/*
+    TODO:
+    -Anti aliasing by offsetting rays
+    -diffuse lighting samples
+    -Metal material (reflective)
+    -Glass material (refractive)
+    -Focus blur
+*/
 using Vector = FS::Vector;
 using Vector2 = FS::Vector2;
 FS::Colour backgroundColor = { 64, 64, 64 };
