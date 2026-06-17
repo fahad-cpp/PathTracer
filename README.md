@@ -1,3 +1,3 @@
 # CPU Path Tracer
 
-toy path tracer in C++
+software path tracer in C++

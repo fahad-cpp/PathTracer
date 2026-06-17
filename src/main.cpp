@@ -9,9 +9,11 @@
 
 using Vector = FS::Vector;
 using Vector2 = FS::Vector2;
+FS::Colour backgroundColor = { 64, 64, 64 };
 
 struct Material {
     FS::Colour color;
+    float reflectiveness;
 };
 
 struct Sphere {
@@ -111,20 +113,32 @@ IntersectionData closestIntersection(const Vector &origin, const Vector &directi
 
     return intData;
 }
+Vector reflectRay(const Vector& R,const Vector& N){
+    return (2 * (N * dot(R,N)) - R);
+}
+FS::Colour traceRay(const Vector &origin, const Vector &direction, const int bounceCount,const Scene &scene) {
+    IntersectionData intersectData = closestIntersection(origin, direction, scene);
+    float reflectiveness = intersectData.material.reflectiveness;
+    if (intersectData.intersection == INT_MAX) {
+        return backgroundColor;
+    }
+    FS::Colour color = intersectData.material.color * rayTracedLight(intersectData.point, intersectData.normal, scene.lights);
+    if(bounceCount == 0 || reflectiveness <= 0.f)return color;
+    Vector newDirection = reflectRay(-direction, intersectData.normal);
+    return ((color * (1 - reflectiveness)) + (traceRay(intersectData.point,newDirection, bounceCount-1, scene) * (1-reflectiveness)));
+}
 void pathTrace(const Scene &scene, FS::RenderState &renderState) {
     constexpr float d = 1.f;
+    //TODO: Randomize direction and use multiple samples (IMPORTANT)
     const Vector origin = { 0, 0, 0 };
     const Vector2 viewportSize = { 1.f, 1.f };
 
     for (int y = 0; y < renderState.height; y++) {
         for (int x = 0; x < renderState.width; x++) {
             Vector direction = { (x - renderState.width / 2.f) * viewportSize.x / float(renderState.width), (y - renderState.height / 2.f) * viewportSize.y / float(renderState.height), d };
-            IntersectionData intersectData = closestIntersection(origin, direction, scene);
-            if (intersectData.intersection != INT_MAX) {
-                uint32_t index = x + (y * renderState.width);
-                float light = rayTracedLight(intersectData.point, intersectData.normal, scene.lights);
-                ((uint32_t *)renderState.screenBuffer)[index] = FS::rgbtoHex(intersectData.material.color * light);
-            }
+            FS::Colour color = traceRay(origin, direction, 3, scene);
+            uint32_t index = x + (y * renderState.width);
+            ((uint32_t *)renderState.screenBuffer)[index] = FS::rgbtoHex(color);
         }
     }
 }
@@ -137,15 +151,17 @@ int main() {
 
     Scene scene;
     scene.spheres.reserve(32);
-    scene.spheres.emplace_back(Vector{ 0, 0, 5 }, 0.2f, Material{ { 0, 255, 0 } });
+    scene.spheres.emplace_back(Vector{ 1, 0, 3 }, 0.2f, Material{ { 255, 0, 0 } , 0.4f});
+    scene.spheres.emplace_back(Vector{ 0, 0, 3 }, 0.2f, Material{ { 0, 255, 0 } , 0.3f});
+    scene.spheres.emplace_back(Vector{ -1, 0, 3}, 0.2f, Material{ { 0, 0, 255 } , 0.4f });
+    scene.spheres.emplace_back(Vector{ 0, 100.3f, 0 }, 100.f, Material{ { 255, 255, 255 } ,0.4f });
 
     scene.lights.reserve(32);
-    scene.lights.emplace_back(Vector{ -3, 4, 0 }, Vector{ 0, 0, 0 }, 0.6f, LightType::LT_POINT);
     scene.lights.emplace_back(Vector{ 0, 0, 0 }, Vector{ 0, 0, 0 }, 0.3f, LightType::LT_AMBIENT);
     scene.lights.emplace_back(Vector{ 0, 0, 0 }, Vector{ -2, 0, 0 }, 0.6f, LightType::LT_DIRECTION);
 
     while (window.isOpen()) {
-        clearScreen(0x00000000, renderState);
+        clearScreen(FS::rgbtoHex(backgroundColor), renderState);
         pathTrace(scene, renderState);
         window.processMessages();
         window.swapBuffers();
