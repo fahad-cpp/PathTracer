@@ -8,6 +8,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <iostream>
+#include <random>
 #include <vector>
 
 /*
@@ -21,7 +22,7 @@
 using Vector = FS::Vector;
 using Vector2 = FS::Vector2;
 using Colour = FS::Colour;
-Colour backgroundColor = { 64, 64, 64 };
+Colour backgroundColor = { uint8_t(0.5 * 255), uint8_t(0.7 * 255), 255 };
 
 struct Material {
     Colour color;
@@ -90,7 +91,7 @@ float rayTracedLight(const Vector &point, const Vector &normal, const std::vecto
 
     return std::clamp(intensity, 0.f, 1.f);
 }
-IntersectionData closestIntersection(const Vector &origin, const Vector &direction, const Scene &scene) {
+IntersectionData closestIntersection(const Vector &origin, const Vector &direction, float min, float max, const Scene &scene) {
     float minT = INT_MAX;
     Material hitMaterial = {};
     Vector hitNormal = {};
@@ -109,7 +110,7 @@ IntersectionData closestIntersection(const Vector &origin, const Vector &directi
             t = (-b - sqrt(discriminant)) / (2 * a);
         }
 
-        if ((t > 0) && (t < minT)) {
+        if ((t < minT) && (t > min) && (t < max)) {
             minT = t;
             hitPoint = origin + (t * direction);
             hitMaterial = sphere.material;
@@ -131,8 +132,10 @@ Vector reflectRay(const Vector &R, const Vector &N) {
 }
 // get random number between [0.f,1.f]
 float unitRandom() {
-    float randnum = (rand() / (RAND_MAX + 1.f));
-    return randnum;
+    static std::random_device device;
+    static std::mt19937 gen(device());
+    static std::uniform_real_distribution<float> dist(-1.f, 1.f);
+    return dist(gen);
 }
 Vector hemisphereRandom(const Vector &normal) {
     Vector randvec = {};
@@ -151,7 +154,7 @@ Vector hemisphereRandom(const Vector &normal) {
     }
 }
 Colour traceRay(const Vector &origin, const Vector &direction, const int bounceCount, const Scene &scene) {
-    IntersectionData intersectData = closestIntersection(origin, direction, scene);
+    IntersectionData intersectData = closestIntersection(origin, direction, 0.001, INT_MAX, scene);
     float reflectiveness = intersectData.material.reflectiveness;
     if (intersectData.intersection == INT_MAX) {
         return backgroundColor;
@@ -160,7 +163,7 @@ Colour traceRay(const Vector &origin, const Vector &direction, const int bounceC
     if (bounceCount == 0 || reflectiveness <= 0.f) {
         return color;
     }
-    Vector newDirection = hemisphereRandom(intersectData.normal); // reflectRay(-direction, intersectData.normal);
+    Vector newDirection = intersectData.normal + normalize(Vector{ unitRandom(), unitRandom(), unitRandom() });
     return traceRay(intersectData.point, newDirection, bounceCount - 1, scene) * 0.5f;
 }
 Vector canvasToViewport(float x, float y, FS::RenderState &renderState) {
@@ -169,7 +172,7 @@ Vector canvasToViewport(float x, float y, FS::RenderState &renderState) {
     return { x * (viewport.x / float(renderState.width)), y * (viewport.y / float(renderState.height)), d };
 }
 void pathTrace(const Scene &scene, FS::RenderState &renderState) {
-    constexpr int SAMPLE_COUNT = 10;
+    constexpr int SAMPLE_COUNT = 20;
     constexpr int BOUNCE = 50;
 
     const Vector origin = { 0, 0, 0 };
