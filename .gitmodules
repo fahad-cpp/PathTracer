@@ -1,0 +1,3 @@
+[submodule "vendor/FSWindow"]
+	path = vendor/FSWindow
+	url = https://github.com/fahad-cpp/FSWindow
