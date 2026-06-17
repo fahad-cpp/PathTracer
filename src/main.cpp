@@ -134,19 +134,19 @@ float unitRandom() {
     float randnum = (rand() / (RAND_MAX + 1.f));
     return randnum;
 }
-Vector hemisphereRandom(const Vector& normal){
+Vector hemisphereRandom(const Vector &normal) {
     Vector randvec = {};
-    //Very inefficient , fix later
-    while(true){
-        randvec = {unitRandom(),unitRandom(),unitRandom()};
-        if(length(randvec) < 1){
+    // Very inefficient , fix later
+    while (true) {
+        randvec = { unitRandom(), unitRandom(), unitRandom() };
+        if (length(randvec) < 1) {
             break;
         }
     }
     normalize(randvec);
-    if(dot(randvec,normal) > 0.f){
+    if (dot(randvec, normal) > 0.f) {
         return randvec;
-    }else{
+    } else {
         return -randvec;
     }
 }
@@ -160,8 +160,8 @@ Colour traceRay(const Vector &origin, const Vector &direction, const int bounceC
     if (bounceCount == 0 || reflectiveness <= 0.f) {
         return color;
     }
-    Vector newDirection = hemisphereRandom(intersectData.normal);//reflectRay(-direction, intersectData.normal);
-    return traceRay(intersectData.point , newDirection , bounceCount-1 , scene) * 0.5f;
+    Vector newDirection = hemisphereRandom(intersectData.normal); // reflectRay(-direction, intersectData.normal);
+    return traceRay(intersectData.point, newDirection, bounceCount - 1, scene) * 0.5f;
 }
 Vector canvasToViewport(float x, float y, FS::RenderState &renderState) {
     constexpr float d = 1.f;
@@ -174,6 +174,7 @@ void pathTrace(const Scene &scene, FS::RenderState &renderState) {
 
     const Vector origin = { 0, 0, 0 };
     for (int y = 0; y < renderState.height; y++) {
+        std::clog << "\rScanlines done: " << y + 1 << "/" << renderState.height << std::flush;
         for (int x = 0; x < renderState.width; x++) {
             // TODO: Randomize direction and use multiple samples
             Vector fcolor;
@@ -216,9 +217,8 @@ int main() {
 
     pathTrace(scene, renderState);
     window.swapBuffers();
-    
+
     while (window.isOpen()) {
         window.processMessages();
     }
-
 }
