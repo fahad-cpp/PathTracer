@@ -2,7 +2,6 @@
 #include "Vector.h"
 #include "Vector2.h"
 #include <FSWindow.h>
-#include <algorithm>
 #include <climits>
 #include <cstdint>
 #include <cstdio>
@@ -13,7 +12,6 @@
 
 /*
     TODO:
-    -Anti aliasing by offsetting rays
     -diffuse lighting samples
     -Metal material (reflective)
     -Glass material (refractive)
@@ -22,11 +20,13 @@
 using Vector = FS::Vector;
 using Vector2 = FS::Vector2;
 using Colour = FS::Colour;
-Colour backgroundColor = { uint8_t(0.5 * 255), uint8_t(0.7 * 255), 255 };
+Colour skycolor1 = { 255, 255, 255 };
+Colour skycolor2 = { (0.5 * 255), (0.7 * 255), 255 };
 
 struct Material {
     Colour color;
     float reflectiveness;
+    float illumination;
 };
 
 struct Sphere {
@@ -35,22 +35,22 @@ struct Sphere {
     Material material;
 };
 
-enum class LightType : uint8_t {
-    LT_POINT = 0,
-    LT_DIRECTION,
-    LT_AMBIENT
-};
+// enum class LightType : uint8_t {
+//     LT_POINT = 0,
+//     LT_DIRECTION,
+//     LT_AMBIENT
+// };
 
-struct Light {
-    Vector pos;
-    Vector direction;
-    float intensity;
-    LightType type;
-};
+// struct Light {
+//     Vector pos;
+//     Vector direction;
+//     float intensity;
+//     LightType type;
+// };
 
 struct Scene {
     std::vector<Sphere> spheres;
-    std::vector<Light> lights;
+    // std::vector<Light> lights;
 };
 
 struct IntersectionData {
@@ -72,25 +72,25 @@ Vector normalize(const Vector &vec) {
     return vec / length(vec);
 }
 // vv You're not supposed to use this for path tracing , its already done when tracing paths
-float rayTracedLight(const Vector &point, const Vector &normal, const std::vector<Light> &lights) {
-    float intensity = 0.f;
-    for (const Light &light : lights) {
-        Vector L = {};
-        if (light.type == LightType::LT_AMBIENT) {
-            intensity += light.intensity;
-        } else {
-            if (light.type == LightType::LT_DIRECTION) {
-                L = normalize(-light.direction);
-            } else if (light.type == LightType::LT_POINT) {
-                L = normalize(light.pos - point);
-            }
-            float diffuse = std::max(0.f, dot(normal, L));
-            intensity += (diffuse * light.intensity);
-        }
-    }
+// float rayTracedLight(const Vector &point, const Vector &normal, const std::vector<Light> &lights) {
+//     float intensity = 0.f;
+//     for (const Light &light : lights) {
+//         Vector L = {};
+//         if (light.type == LightType::LT_AMBIENT) {
+//             intensity += light.intensity;
+//         } else {
+//             if (light.type == LightType::LT_DIRECTION) {
+//                 L = normalize(-light.direction);
+//             } else if (light.type == LightType::LT_POINT) {
+//                 L = normalize(light.pos - point);
+//             }
+//             float diffuse = std::max(0.f, dot(normal, L));
+//             intensity += (diffuse * light.intensity);
+//         }
+//     }
 
-    return std::clamp(intensity, 0.f, 1.f);
-}
+//     return std::clamp(intensity, 0.f, 1.f);
+// }
 IntersectionData closestIntersection(const Vector &origin, const Vector &direction, float min, float max, const Scene &scene) {
     float minT = INT_MAX;
     Material hitMaterial = {};
@@ -153,52 +153,57 @@ Vector hemisphereRandom(const Vector &normal) {
         return -randvec;
     }
 }
+template <typename T>
+T lerp(T &a, T &b, float t) {
+    return (a + (t * (b - a)));
+}
 Colour traceRay(const Vector &origin, const Vector &direction, const int bounceCount, const Scene &scene) {
-    IntersectionData intersectData = closestIntersection(origin, direction, 0.001, INT_MAX, scene);
-    float reflectiveness = intersectData.material.reflectiveness;
+    IntersectionData intersectData = closestIntersection(origin, direction, 0.001f, INT_MAX, scene);
     if (intersectData.intersection == INT_MAX) {
-        return backgroundColor;
+        return { 0, 0, 0 }; // lerp(skycolor2, skycolor1, (direction.y + 0.5f));
     }
     Colour color = intersectData.material.color;
-    if (bounceCount == 0 || reflectiveness <= 0.f) {
+    if (bounceCount <= 0) {
         return color;
     }
     Vector newDirection = intersectData.normal + normalize(Vector{ unitRandom(), unitRandom(), unitRandom() });
-    return traceRay(intersectData.point, newDirection, bounceCount - 1, scene) * 0.5f;
+    float factor = 0.5f;
+    float illum = intersectData.material.illumination;
+    return (traceRay(intersectData.point, newDirection, bounceCount - 1, scene) * (1 - factor)) + (color * illum * factor);
 }
 Vector canvasToViewport(float x, float y, FS::RenderState &renderState) {
     constexpr float d = 1.f;
     const Vector viewport{ renderState.width / float(renderState.height), 1 };
     return { x * (viewport.x / float(renderState.width)), y * (viewport.y / float(renderState.height)), d };
 }
-void pathTrace(const Scene &scene, FS::RenderState &renderState) {
-    constexpr int SAMPLE_COUNT = 20;
+void pathTrace(const Scene &scene, FS::RenderState &renderState, FS::Window &window) {
+    constexpr int SAMPLE_COUNT = 100;
     constexpr int BOUNCE = 50;
 
     const Vector origin = { 0, 0, 0 };
     for (int y = 0; y < renderState.height; y++) {
-        std::clog << "\rScanlines done: " << y + 1 << "/" << renderState.height << std::flush;
+        std::cout << "\rScanlines done: " << y + 1 << "/" << renderState.height;
         for (int x = 0; x < renderState.width; x++) {
-            // TODO: Randomize direction and use multiple samples
-            Vector fcolor;
+            FS::Colourf colourf;
             for (int i = 0; i < SAMPLE_COUNT; i++) {
                 float samplex = x + (unitRandom() - 0.5f);
                 float sampley = y + (unitRandom() - 0.5f);
                 Vector direction = canvasToViewport(samplex - (renderState.width / 2.f), sampley - (renderState.height / 2.f), renderState);
                 Colour color = traceRay(origin, direction, BOUNCE, scene);
-                fcolor.x += (color.R / 255.f);
-                fcolor.y += (color.G / 255.f);
-                fcolor.z += (color.B / 255.f);
+                colourf.R += (color.R / 255.f);
+                colourf.G += (color.G / 255.f);
+                colourf.B += (color.B / 255.f);
             }
-            fcolor = fcolor / SAMPLE_COUNT;
+            colourf = colourf / SAMPLE_COUNT;
             Colour pixelColor = {
-                uint8_t(std::clamp(fcolor.x * 255.f, 0.f, 255.f)),
-                uint8_t(std::clamp(fcolor.y * 255.f, 0.f, 255.f)),
-                uint8_t(std::clamp(fcolor.z * 255.f, 0.f, 255.f))
+                colourf.R * 255,
+                colourf.G * 255,
+                colourf.B * 255
             };
             uint32_t index = x + (y * renderState.width);
             ((uint32_t *)renderState.screenBuffer)[index] = FS::rgbtoHex(pixelColor);
         }
+        window.swapBuffers();
     }
 }
 int main() {
@@ -210,15 +215,12 @@ int main() {
 
     Scene scene;
     scene.spheres.reserve(32);
-    scene.spheres.emplace_back(Vector{ -0.5f, 0, 1 }, 0.2f, Material{ { 255, 0, 0 }, 0.4f });
-    scene.spheres.emplace_back(Vector{ 0, 0, 1 }, 0.2f, Material{ { 0, 255, 0 }, 0.3f });
-    scene.spheres.emplace_back(Vector{ 0.5f, 0, 1 }, 0.2f, Material{ { 0, 0, 255 }, 0.4f });
-    scene.spheres.emplace_back(Vector{ 0, 100.2f, 0 }, 100.f, Material{ { 255, 255, 255 }, 0.4f });
+    scene.spheres.emplace_back(Vector{ -0.5f, 0, 1 }, 0.2f, Material{ { 255, 0, 0 }, 0.4f, 0.f });
+    scene.spheres.emplace_back(Vector{ 0, 0, 1 }, 0.2f, Material{ { 0, 255, 0 }, 0.3f, 1.f });
+    scene.spheres.emplace_back(Vector{ 0.5f, 0, 1 }, 0.2f, Material{ { 0, 0, 255 }, 0.4f, 0.f });
+    scene.spheres.emplace_back(Vector{ 0, 100.2f, 0 }, 100.f, Material{ { 255, 255, 255 }, 0.4f, 0.f });
 
-    scene.lights.reserve(32);
-    scene.lights.emplace_back(Vector{ 0, 0, 0 }, Vector{ -2, 0, 0 }, 0.6f, LightType::LT_DIRECTION);
-
-    pathTrace(scene, renderState);
+    pathTrace(scene, renderState, window);
     window.swapBuffers();
 
     while (window.isOpen()) {
