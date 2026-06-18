@@ -3,6 +3,7 @@
 #include "Vector2.h"
 #include <FSWindow.h>
 #include <climits>
+#include <cmath>
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>
@@ -20,6 +21,7 @@
 using Vector = FS::Vector;
 using Vector2 = FS::Vector2;
 using Colour = FS::Colour;
+using Colourf = FS::Colourf;
 Colour skycolor1 = { 255, 255, 255 };
 Colour skycolor2 = { (0.5 * 255), (0.7 * 255), 255 };
 
@@ -131,21 +133,26 @@ Vector reflectRay(const Vector &R, const Vector &N) {
     return (2 * (N * dot(R, N)) - R);
 }
 // get random number between [0.f,1.f]
-float unitRandom() {
+float cubeRandom() {
     static std::random_device device;
     static std::mt19937 gen(device());
     static std::uniform_real_distribution<float> dist(-1.f, 1.f);
     return dist(gen);
 }
-Vector hemisphereRandom(const Vector &normal) {
-    Vector randvec = {};
-    // Very inefficient , fix later
+Vector unitRandom(){
+    Vector randvec;
     while (true) {
-        randvec = { unitRandom(), unitRandom(), unitRandom() };
+        randvec = { cubeRandom(), cubeRandom(), cubeRandom() };
         if (length(randvec) < 1) {
             break;
         }
     }
+    return randvec;
+}
+Vector hemisphereRandom(const Vector &normal) {
+    Vector randvec = {};
+    // Very inefficient , fix later
+    
     normalize(randvec);
     if (dot(randvec, normal) > 0.f) {
         return randvec;
@@ -160,25 +167,36 @@ T lerp(T &a, T &b, float t) {
 Colour traceRay(const Vector &origin, const Vector &direction, const int bounceCount, const Scene &scene) {
     IntersectionData intersectData = closestIntersection(origin, direction, 0.001f, INT_MAX, scene);
     if (intersectData.intersection == INT_MAX) {
-        return { 0, 0, 0 }; // lerp(skycolor2, skycolor1, (direction.y + 0.5f));
+        return lerp(skycolor2, skycolor1, (direction.y + 0.5f));
     }
     Colour color = intersectData.material.color;
     if (bounceCount <= 0) {
         return color;
     }
-    Vector newDirection = intersectData.normal + normalize(Vector{ unitRandom(), unitRandom(), unitRandom() });
-    float factor = 0.5f;
-    float illum = intersectData.material.illumination;
-    return (traceRay(intersectData.point, newDirection, bounceCount - 1, scene) * (1 - factor)) + (color * illum * factor);
+    Vector newDirection = intersectData.normal + normalize(unitRandom());
+    return traceRay(intersectData.point, newDirection, bounceCount - 1, scene) * 0.5f;
 }
 Vector canvasToViewport(float x, float y, FS::RenderState &renderState) {
     constexpr float d = 1.f;
     const Vector viewport{ renderState.width / float(renderState.height), 1 };
     return { x * (viewport.x / float(renderState.width)), y * (viewport.y / float(renderState.height)), d };
 }
+Colourf linearToGamma(const Colour& color){
+    Colourf gammacolor;
+    if(color.R > 0){
+        gammacolor.R = std::sqrt(color.R / 255.f);
+    }
+    if(color.G > 0){
+        gammacolor.G = std::sqrt(color.G / 255.f);
+    }
+    if(color.B > 0){
+        gammacolor.B = std::sqrt(color.B / 255.f);
+    }
+    return gammacolor;
+}
 void pathTrace(const Scene &scene, FS::RenderState &renderState, FS::Window &window) {
-    constexpr int SAMPLE_COUNT = 100;
-    constexpr int BOUNCE = 50;
+    constexpr int SAMPLE_COUNT = 10;
+    constexpr int BOUNCE = 10;
 
     const Vector origin = { 0, 0, 0 };
     for (int y = 0; y < renderState.height; y++) {
@@ -186,8 +204,8 @@ void pathTrace(const Scene &scene, FS::RenderState &renderState, FS::Window &win
         for (int x = 0; x < renderState.width; x++) {
             FS::Colourf colourf;
             for (int i = 0; i < SAMPLE_COUNT; i++) {
-                float samplex = x + (unitRandom() - 0.5f);
-                float sampley = y + (unitRandom() - 0.5f);
+                float samplex = x + (cubeRandom() - 0.5f);
+                float sampley = y + (cubeRandom() - 0.5f);
                 Vector direction = canvasToViewport(samplex - (renderState.width / 2.f), sampley - (renderState.height / 2.f), renderState);
                 Colour color = traceRay(origin, direction, BOUNCE, scene);
                 colourf.R += (color.R / 255.f);
@@ -201,7 +219,7 @@ void pathTrace(const Scene &scene, FS::RenderState &renderState, FS::Window &win
                 colourf.B * 255
             };
             uint32_t index = x + (y * renderState.width);
-            ((uint32_t *)renderState.screenBuffer)[index] = FS::rgbtoHex(pixelColor);
+            ((uint32_t *)renderState.screenBuffer)[index] = FS::rgbtoHex(linearToGamma(pixelColor));
         }
         window.swapBuffers();
     }
