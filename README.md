@@ -2,6 +2,6 @@
 
 software path tracer in C++
 
-Latest Renders:
-![Path Traced Balls](renders/diffuse.png)
-![Glowing Ball](renders/glow.png)
+Latest Renders:<br>
+![Path Traced Balls](renders/diffuse.png)<br>
+![Glowing Ball](renders/glow.png)<ber>
