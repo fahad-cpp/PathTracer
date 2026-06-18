@@ -1,4 +1,5 @@
 #include "Colour.h"
+#include "Input.h"
 #include "Vector.h"
 #include "Vector2.h"
 #include <FSWindow.h>
@@ -22,11 +23,11 @@ using Vector = FS::Vector;
 using Vector2 = FS::Vector2;
 using Colour = FS::Colour;
 using Colourf = FS::Colourf;
-Colour skycolor1 = { 255, 255, 255 };
-Colour skycolor2 = { (0.5 * 255), (0.7 * 255), 255 };
+Colourf skycolor1 = { 1, 1, 1 };
+Colourf skycolor2 = { 0.5f, 0.7f, 1 };
 
 struct Material {
-    Colour color;
+    Colourf color;
     float reflectiveness;
     float illumination;
 };
@@ -139,11 +140,11 @@ float cubeRandom() {
     static std::uniform_real_distribution<float> dist(-1.f, 1.f);
     return dist(gen);
 }
-Vector unitRandom(){
+Vector unitRandom() {
     Vector randvec;
     while (true) {
         randvec = { cubeRandom(), cubeRandom(), cubeRandom() };
-        if (length(randvec) < 1) {
+        if (length(randvec) <= 1.f) {
             break;
         }
     }
@@ -152,7 +153,7 @@ Vector unitRandom(){
 Vector hemisphereRandom(const Vector &normal) {
     Vector randvec = {};
     // Very inefficient , fix later
-    
+
     normalize(randvec);
     if (dot(randvec, normal) > 0.f) {
         return randvec;
@@ -164,40 +165,42 @@ template <typename T>
 T lerp(T &a, T &b, float t) {
     return (a + (t * (b - a)));
 }
-Colour traceRay(const Vector &origin, const Vector &direction, const int bounceCount, const Scene &scene) {
+Colourf traceRay(const Vector &origin, const Vector &direction, const int bounceCount, const Scene &scene) {
     IntersectionData intersectData = closestIntersection(origin, direction, 0.001f, INT_MAX, scene);
     if (intersectData.intersection == INT_MAX) {
         return lerp(skycolor2, skycolor1, (direction.y + 0.5f));
     }
-    Colour color = intersectData.material.color;
+    Colourf color = intersectData.material.color;
     if (bounceCount <= 0) {
-        return color;
+        return {0,0,0};
     }
-    Vector newDirection = intersectData.normal + normalize(unitRandom());
-    return traceRay(intersectData.point, newDirection, bounceCount - 1, scene) * 0.5f;
+    Vector newDirection = normalize(intersectData.normal + normalize(unitRandom()));
+    float illum = intersectData.material.illumination;
+    return (traceRay(intersectData.point, newDirection, bounceCount - 1, scene) + illum) * color;
 }
 Vector canvasToViewport(float x, float y, FS::RenderState &renderState) {
     constexpr float d = 1.f;
     const Vector viewport{ renderState.width / float(renderState.height), 1 };
     return { x * (viewport.x / float(renderState.width)), y * (viewport.y / float(renderState.height)), d };
 }
-Colourf linearToGamma(const Colour& color){
+Colourf linearToGamma(const Colourf &color) {
     Colourf gammacolor;
-    if(color.R > 0){
-        gammacolor.R = std::sqrt(color.R / 255.f);
+    if (color.R > 0) {
+        gammacolor.R = std::sqrt(color.R);
     }
-    if(color.G > 0){
-        gammacolor.G = std::sqrt(color.G / 255.f);
+    if (color.G > 0) {
+        gammacolor.G = std::sqrt(color.G);
     }
-    if(color.B > 0){
-        gammacolor.B = std::sqrt(color.B / 255.f);
+    if (color.B > 0) {
+        gammacolor.B = std::sqrt(color.B);
     }
     return gammacolor;
 }
-void pathTrace(const Scene &scene, FS::RenderState &renderState, FS::Window &window) {
-    constexpr int SAMPLE_COUNT = 10;
-    constexpr int BOUNCE = 10;
+void pathTrace(const Scene &scene, FS::Window &window) {
+    constexpr int SAMPLE_COUNT = 50;
+    constexpr int BOUNCE = 100;
 
+    FS::RenderState &renderState = *(window.getRenderState());
     const Vector origin = { 0, 0, 0 };
     for (int y = 0; y < renderState.height; y++) {
         std::cout << "\rScanlines done: " << y + 1 << "/" << renderState.height;
@@ -207,21 +210,17 @@ void pathTrace(const Scene &scene, FS::RenderState &renderState, FS::Window &win
                 float samplex = x + (cubeRandom() - 0.5f);
                 float sampley = y + (cubeRandom() - 0.5f);
                 Vector direction = canvasToViewport(samplex - (renderState.width / 2.f), sampley - (renderState.height / 2.f), renderState);
-                Colour color = traceRay(origin, direction, BOUNCE, scene);
-                colourf.R += (color.R / 255.f);
-                colourf.G += (color.G / 255.f);
-                colourf.B += (color.B / 255.f);
+                Colourf color = traceRay(origin, direction, BOUNCE, scene);
+                colourf.R += (color.R);
+                colourf.G += (color.G);
+                colourf.B += (color.B);
             }
             colourf = colourf / SAMPLE_COUNT;
-            Colour pixelColor = {
-                colourf.R * 255,
-                colourf.G * 255,
-                colourf.B * 255
-            };
             uint32_t index = x + (y * renderState.width);
-            ((uint32_t *)renderState.screenBuffer)[index] = FS::rgbtoHex(linearToGamma(pixelColor));
+            ((uint32_t *)renderState.screenBuffer)[index] = FS::rgbtoHex(linearToGamma(colourf));
         }
         window.swapBuffers();
+        window.processMessages();
     }
 }
 int main() {
@@ -233,15 +232,55 @@ int main() {
 
     Scene scene;
     scene.spheres.reserve(32);
-    scene.spheres.emplace_back(Vector{ -0.5f, 0, 1 }, 0.2f, Material{ { 255, 0, 0 }, 0.4f, 0.f });
-    scene.spheres.emplace_back(Vector{ 0, 0, 1 }, 0.2f, Material{ { 0, 255, 0 }, 0.3f, 1.f });
-    scene.spheres.emplace_back(Vector{ 0.5f, 0, 1 }, 0.2f, Material{ { 0, 0, 255 }, 0.4f, 0.f });
-    scene.spheres.emplace_back(Vector{ 0, 100.2f, 0 }, 100.f, Material{ { 255, 255, 255 }, 0.4f, 0.f });
+    scene.spheres.push_back({
+        .center = Vector{ -0.5f, 0, 1 },
+        .radius = 0.2f,
+        .material = {
+            .color = { 1, 0.1f, 0.1f },
+            .reflectiveness = 0.f,
+            .illumination = 0.f,
+        },
+    });
+    scene.spheres.push_back({
+        .center = Vector{ 0, 0, 1 },
+        .radius = 0.2f,
+        .material = {
+            .color = { 0.1f, 1, 0.1f },
+            .reflectiveness = 0.f,
+            .illumination = 0.f,
+        },
+    });
+    scene.spheres.push_back({
+        .center = Vector{ 0.5f, 0, 1 },
+        .radius = 0.2f,
+        .material = {
+            .color = { 0.1f, 0.1f, 1 },
+            .reflectiveness = 0.f,
+            .illumination = 0.f,
+        },
+    });
+    scene.spheres.push_back({
+        .center = Vector{ 0, 100.2f, 0 },
+        .radius = 100.f,
+        .material = {
+            .color = { 1, 1, 1 },
+            .reflectiveness = 0.f,
+            .illumination = 0.f,
+        },
+    });
 
-    pathTrace(scene, renderState, window);
-    window.swapBuffers();
+    pathTrace(scene, window);
 
     while (window.isOpen()) {
+        FS::Input &input = *(window.getInput());
+        if (isDown(FS::Buttons::BUTTON_R)) {
+            clearScreen(0x00000000, renderState);
+            pathTrace(scene, window);
+        }
+        if (isDown(FS::Buttons::BUTTON_ESC)) {
+            window.close();
+        }
+        window.swapBuffers();
         window.processMessages();
     }
 }
