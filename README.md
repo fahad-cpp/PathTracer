@@ -4,7 +4,8 @@ software path tracer in C++
 
 ## Latest Renders:<br>
 ![Path Traced Balls](renders/diffuse.png)<br>
-![Glowing Ball](renders/glow.png)<ber>
+![Glowing Ball](renders/glow.png)<br>
+![Coloured Balls](renders/colored.png)
 
 
 # Building from source
@@ -42,4 +43,5 @@ build\PathTracer.exe
 
 # Input
 - `R` - Render again
+- `P` - Print to PPM
 - `ESC` - Exit

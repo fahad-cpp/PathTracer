@@ -8,13 +8,14 @@
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>
+#include <fstream>
 #include <iostream>
 #include <random>
+#include <string>
 #include <vector>
 
 /*
     TODO:
-    -diffuse lighting samples
     -Metal material (reflective)
     -Glass material (refractive)
     -Focus blur
@@ -38,22 +39,8 @@ struct Sphere {
     Material material;
 };
 
-// enum class LightType : uint8_t {
-//     LT_POINT = 0,
-//     LT_DIRECTION,
-//     LT_AMBIENT
-// };
-
-// struct Light {
-//     Vector pos;
-//     Vector direction;
-//     float intensity;
-//     LightType type;
-// };
-
 struct Scene {
     std::vector<Sphere> spheres;
-    // std::vector<Light> lights;
 };
 
 struct IntersectionData {
@@ -74,26 +61,6 @@ void clearScreen(uint32_t color, FS::RenderState &renderState) {
 Vector normalize(const Vector &vec) {
     return vec / length(vec);
 }
-// vv You're not supposed to use this for path tracing , its already done when tracing paths
-// float rayTracedLight(const Vector &point, const Vector &normal, const std::vector<Light> &lights) {
-//     float intensity = 0.f;
-//     for (const Light &light : lights) {
-//         Vector L = {};
-//         if (light.type == LightType::LT_AMBIENT) {
-//             intensity += light.intensity;
-//         } else {
-//             if (light.type == LightType::LT_DIRECTION) {
-//                 L = normalize(-light.direction);
-//             } else if (light.type == LightType::LT_POINT) {
-//                 L = normalize(light.pos - point);
-//             }
-//             float diffuse = std::max(0.f, dot(normal, L));
-//             intensity += (diffuse * light.intensity);
-//         }
-//     }
-
-//     return std::clamp(intensity, 0.f, 1.f);
-// }
 IntersectionData closestIntersection(const Vector &origin, const Vector &direction, float min, float max, const Scene &scene) {
     float minT = INT_MAX;
     Material hitMaterial = {};
@@ -142,6 +109,7 @@ float cubeRandom() {
 }
 Vector unitRandom() {
     Vector randvec;
+    // Very inefficient , fix later
     while (true) {
         randvec = { cubeRandom(), cubeRandom(), cubeRandom() };
         if (length(randvec) <= 1.f) {
@@ -151,9 +119,7 @@ Vector unitRandom() {
     return randvec;
 }
 Vector hemisphereRandom(const Vector &normal) {
-    Vector randvec = {};
-    // Very inefficient , fix later
-
+    Vector randvec = unitRandom();
     normalize(randvec);
     if (dot(randvec, normal) > 0.f) {
         return randvec;
@@ -172,7 +138,7 @@ Colourf traceRay(const Vector &origin, const Vector &direction, const int bounce
     }
     Colourf color = intersectData.material.color;
     if (bounceCount <= 0) {
-        return {0,0,0};
+        return { 0, 0, 0 };
     }
     Vector newDirection = normalize(intersectData.normal + normalize(unitRandom()));
     float illum = intersectData.material.illumination;
@@ -197,8 +163,8 @@ Colourf linearToGamma(const Colourf &color) {
     return gammacolor;
 }
 void pathTrace(const Scene &scene, FS::Window &window) {
-    constexpr int SAMPLE_COUNT = 50;
-    constexpr int BOUNCE = 100;
+    constexpr int SAMPLE_COUNT = 1024;
+    constexpr int BOUNCE = 20;
 
     FS::RenderState &renderState = *(window.getRenderState());
     const Vector origin = { 0, 0, 0 };
@@ -222,6 +188,29 @@ void pathTrace(const Scene &scene, FS::Window &window) {
         window.swapBuffers();
         window.processMessages();
     }
+    std::cout << "Rendered.\n";
+}
+void exportToPPM(uint32_t *buffer, uint32_t width, uint32_t height, const std::string &file) {
+    if (!buffer) {
+        std::cerr << "Invalid buffer :exportToPPM()\n";
+        return;
+    }
+    std::ofstream ofs(file);
+    if (!ofs.is_open()) {
+        std::cerr << "Failed to open file " << file << " :exportToPPM()\n";
+        return;
+    }
+    ofs << "P3\n";
+    ofs << width << ' ' << height << "\n";
+    ofs << "255\n";
+    for (uint32_t y = 0; y < height; y++) {
+        for (uint32_t x = 0; x < width; x++) {
+            uint32_t index = x + (y * width);
+            Colour color = FS::hexToRGB(buffer[index]);
+            ofs << int(color.R) << ' ' << int(color.G) << ' ' << int(color.B) << '\n';
+        }
+    }
+    ofs.close();
 }
 int main() {
     constexpr int width = 720;
@@ -270,7 +259,6 @@ int main() {
     });
 
     pathTrace(scene, window);
-
     while (window.isOpen()) {
         FS::Input &input = *(window.getInput());
         if (isDown(FS::Buttons::BUTTON_R)) {
@@ -279,6 +267,9 @@ int main() {
         }
         if (isDown(FS::Buttons::BUTTON_ESC)) {
             window.close();
+        }
+        if (isDown(FS::Buttons::BUTTON_P)) {
+            exportToPPM((uint32_t *)renderState.screenBuffer, renderState.width, renderState.height, "output.ppm");
         }
         window.swapBuffers();
         window.processMessages();
