@@ -1,7 +1,6 @@
 #include "Colour.h"
 #include "Input.h"
 #include "Vector.h"
-#include "Vector2.h"
 #include <FSWindow.h>
 #include <climits>
 #include <cmath>
@@ -20,10 +19,9 @@
     -Glass material (refractive)
     -Focus blur
 */
-using Vector = FS::Vector;
-using Vector2 = FS::Vector2;
-using Colour = FS::Colour;
-using Colourf = FS::Colourf;
+
+using namespace FS;
+
 Colourf skycolor1 = { 1, 1, 1 };
 Colourf skycolor2 = { 0.5f, 0.7f, 1 };
 
@@ -119,8 +117,7 @@ Vector unitRandom() {
     return randvec;
 }
 Vector hemisphereRandom(const Vector &normal) {
-    Vector randvec = unitRandom();
-    normalize(randvec);
+    Vector randvec = normalize(unitRandom());
     if (dot(randvec, normal) > 0.f) {
         return randvec;
     } else {
@@ -128,7 +125,7 @@ Vector hemisphereRandom(const Vector &normal) {
     }
 }
 template <typename T>
-T lerp(T &a, T &b, float t) {
+T lerp(const T &a,const T &b, float t) {
     return (a + (t * (b - a)));
 }
 Colourf traceRay(const Vector &origin, const Vector &direction, const int bounceCount, const Scene &scene) {
@@ -166,7 +163,7 @@ void pathTrace(const Scene &scene, FS::Window &window) {
     constexpr int SAMPLE_COUNT = 1024;
     constexpr int BOUNCE = 20;
 
-    FS::RenderState &renderState = *(window.getRenderState());
+    FS::RenderState renderState = window.getRenderState();
     const Vector origin = { 0, 0, 0 };
     for (int y = 0; y < renderState.height; y++) {
         std::cout << "\rScanlines done: " << y + 1 << "/" << renderState.height;
@@ -217,7 +214,7 @@ int main() {
     constexpr int height = 720;
 
     FS::Window window("Path Tracer", width, height);
-    FS::RenderState &renderState = *(window.getRenderState());
+    FS::RenderState renderState = window.getRenderState();
 
     Scene scene;
     scene.spheres.reserve(32);
@@ -259,8 +256,9 @@ int main() {
     });
 
     pathTrace(scene, window);
+    
     while (window.isOpen()) {
-        FS::Input &input = *(window.getInput());
+        FS::Input input = window.getInput();
         if (isDown(FS::Buttons::BUTTON_R)) {
             clearScreen(0x00000000, renderState);
             pathTrace(scene, window);
