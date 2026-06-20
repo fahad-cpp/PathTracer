@@ -1,6 +1,7 @@
 #include "Colour.h"
 #include "Input.h"
 #include "Vector.h"
+#include "Vector2.h"
 #include <FSWindow.h>
 #include <climits>
 #include <cmath>
@@ -22,10 +23,15 @@
     -Focus blur
 */
 
-using namespace FS;
+using Vector = FS::Vector;
+using Vector2 = FS::Vector2;
+using Colour = FS::Colour;
+using Colourf = FS::Colourf;
 
-Colourf skycolor1 = { 1, 1, 1 };
-Colourf skycolor2 = { 0.5f, 0.7f, 1 };
+// Colourf skycolor1 = { 1, 1, 1 };
+// Colourf skycolor2 = { 0.5f, 0.7f, 1 };
+Colourf skycolor1 = { 0, 0, 0 };
+Colourf skycolor2 = { 0, 0, 0 };
 
 struct Material {
     Colourf color;
@@ -159,42 +165,54 @@ Colourf traceRay(const Vector &origin, const Vector &direction, const int bounce
     return (traceRay(intersectData.point, newDirection, bounceCount - 1, scene) + illum) * color;
 }
 // Rendering
+void pathTraceTile(const Vector2 offset, const Vector2 tileSize, FS::Window &window, const Scene &scene, std::mutex &windowMtx, const int SAMPLE_COUNT, const int BOUNCE) {
+    FS::RenderState& renderState = window.getRenderState();
+    const Vector origin = { 0, 0, 0 };
+    for (int y = offset.y; y < (offset.y + tileSize.y); y++) {
+        for (int x = offset.x; x < (offset.x + tileSize.x); x++) {
+            FS::Colourf colourf;
+            for (int i = 0; i < SAMPLE_COUNT; i++) {
+                float samplex = x + (cubeRandom() - 0.5f);
+                float sampley = y + (cubeRandom() - 0.5f);
+                Vector direction = canvasToViewport(samplex - (renderState.width / 2.f), sampley - (renderState.height / 2.f), renderState);
+                Colourf color = traceRay(origin, direction, BOUNCE, scene);
+                colourf.R += (color.R);
+                colourf.G += (color.G);
+                colourf.B += (color.B);
+            }
+            colourf = colourf / SAMPLE_COUNT;
+            uint32_t index = x + (y * renderState.width);
+            ((uint32_t *)renderState.screenBuffer)[index] = FS::rgbtoHex(linearToGamma(colourf));
+        }
+        std::lock_guard<std::mutex> lock(windowMtx);
+        window.swapBuffers();
+        window.processMessages();
+    }
+}
 void pathTrace(const Scene &scene, FS::Window &window) {
     constexpr int SAMPLE_COUNT = 1024;
     constexpr int BOUNCE = 20;
 
     FS::RenderState renderState = window.getRenderState();
-    const Vector origin = { 0, 0, 0 };
-    std::vector<std::thread> threads(renderState.height);
-    std::atomic<int> scanlineCount=0; 
-    for (int y = 0; y < renderState.height; y++) {
-        // std::cout << "\rScanlines done: " << y + 1 << "/" << renderState.height;
-        std::mutex windowMutex;
-        threads[y] = std::thread([y, &renderState, &origin, &scene,&scanlineCount,&window,&windowMutex]() {
-            for (int x = 0; x < renderState.width; x++) {
-                FS::Colourf colourf;
-                for (int i = 0; i < SAMPLE_COUNT; i++) {
-                    float samplex = x + (cubeRandom() - 0.5f);
-                    float sampley = y + (cubeRandom() - 0.5f);
-                    Vector direction = canvasToViewport(samplex - (renderState.width / 2.f), sampley - (renderState.height / 2.f), renderState);
-                    Colourf color = traceRay(origin, direction, BOUNCE, scene);
-                    colourf.R += (color.R);
-                    colourf.G += (color.G);
-                    colourf.B += (color.B);
-                }
-                colourf = colourf / SAMPLE_COUNT;
-                uint32_t index = x + (y * renderState.width);
-                ((uint32_t *)renderState.screenBuffer)[index] = FS::rgbtoHex(linearToGamma(colourf));
-            }
-            std::lock_guard<std::mutex> lock(windowMutex);
-            window.swapBuffers();
-            scanlineCount++;
-        });
-        window.processMessages();
+    const uint32_t threadCount = std::thread::hardware_concurrency();
+    uint32_t remainingLines = renderState.height % threadCount;
+    uint32_t linesPerThread = renderState.height / threadCount;
+    std::vector<std::thread> threads(threadCount);
+    std::mutex windowMutex;
+    uint32_t start = 0;
+    for (uint32_t i = 0; i < threadCount; i++) {
+        int tileY = linesPerThread + ((i < remainingLines) ? 1 : 0);
+        Vector2 tileSize = { float(renderState.width), float(tileY) };
+        Vector2 tileOffset = { float(0), float(start) };
+        threads[i] = std::thread(pathTraceTile, tileOffset, tileSize, std::ref(window), std::cref(scene), std::ref(windowMutex), SAMPLE_COUNT, BOUNCE);
+        start += tileY;
     }
     for (std::thread &thread : threads) {
         thread.join();
     }
+
+    window.swapBuffers();
+    window.processMessages();
     std::cout << "Rendered.\n";
 }
 void exportToPPM(uint32_t *buffer, uint32_t width, uint32_t height, const std::string &file) {
@@ -242,7 +260,7 @@ int main() {
         .material = {
             .color = { 1, 0.1f, 0.1f },
             .reflectiveness = 0.f,
-            .illumination = 0.f,
+            .illumination = 1.f,
         },
     });
     scene.spheres.push_back({
@@ -260,7 +278,7 @@ int main() {
         .material = {
             .color = { 0.1f, 0.1f, 1 },
             .reflectiveness = 0.f,
-            .illumination = 0.f,
+            .illumination = 1.f,
         },
     });
     scene.spheres.push_back({
