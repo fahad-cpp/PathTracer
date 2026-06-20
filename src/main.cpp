@@ -9,8 +9,10 @@
 #include <cstdlib>
 #include <fstream>
 #include <iostream>
+#include <mutex>
 #include <random>
 #include <string>
+#include <thread>
 #include <vector>
 
 /*
@@ -48,17 +50,64 @@ struct IntersectionData {
     float intersection;
 };
 
-void clearScreen(uint32_t color, FS::RenderState &renderState) {
-    for (int y = 0; y < renderState.height; y++) {
-        for (int x = 0; x < renderState.width; x++) {
-            uint32_t index = x + (y * renderState.width);
-            ((uint32_t *)renderState.screenBuffer)[index] = color;
-        }
+// Conversion Utils
+Vector canvasToViewport(float x, float y, FS::RenderState &renderState) {
+    constexpr float d = 1.f;
+    const Vector viewport{ renderState.width / float(renderState.height), 1 };
+    return { x * (viewport.x / float(renderState.width)), y * (viewport.y / float(renderState.height)), d };
+}
+Colourf linearToGamma(const Colourf &color) {
+    Colourf gammacolor;
+    if (color.R > 0) {
+        gammacolor.R = std::sqrt(color.R);
     }
+    if (color.G > 0) {
+        gammacolor.G = std::sqrt(color.G);
+    }
+    if (color.B > 0) {
+        gammacolor.B = std::sqrt(color.B);
+    }
+    return gammacolor;
 }
 Vector normalize(const Vector &vec) {
     return vec / length(vec);
 }
+// Random
+float cubeRandom() {
+    // get random number between [0.f,1.f]
+    static std::random_device device;
+    static std::mt19937 gen(device());
+    static std::uniform_real_distribution<float> dist(-1.f, 1.f);
+    return dist(gen);
+}
+Vector unitRandom() {
+    Vector randvec;
+    // Very inefficient , fix later
+    while (true) {
+        randvec = { cubeRandom(), cubeRandom(), cubeRandom() };
+        if (length(randvec) <= 1.f) {
+            break;
+        }
+    }
+    return randvec;
+}
+Vector hemisphereRandom(const Vector &normal) {
+    Vector randvec = normalize(unitRandom());
+    if (dot(randvec, normal) > 0.f) {
+        return randvec;
+    } else {
+        return -randvec;
+    }
+}
+// Math helpers
+Vector reflectRay(const Vector &R, const Vector &N) {
+    return (2 * (N * dot(R, N)) - R);
+}
+template <typename T>
+T lerp(const T &a, const T &b, float t) {
+    return (a + (t * (b - a)));
+}
+// Core raytracing
 IntersectionData closestIntersection(const Vector &origin, const Vector &direction, float min, float max, const Scene &scene) {
     float minT = INT_MAX;
     Material hitMaterial = {};
@@ -95,39 +144,7 @@ IntersectionData closestIntersection(const Vector &origin, const Vector &directi
 
     return intData;
 }
-Vector reflectRay(const Vector &R, const Vector &N) {
-    return (2 * (N * dot(R, N)) - R);
-}
-// get random number between [0.f,1.f]
-float cubeRandom() {
-    static std::random_device device;
-    static std::mt19937 gen(device());
-    static std::uniform_real_distribution<float> dist(-1.f, 1.f);
-    return dist(gen);
-}
-Vector unitRandom() {
-    Vector randvec;
-    // Very inefficient , fix later
-    while (true) {
-        randvec = { cubeRandom(), cubeRandom(), cubeRandom() };
-        if (length(randvec) <= 1.f) {
-            break;
-        }
-    }
-    return randvec;
-}
-Vector hemisphereRandom(const Vector &normal) {
-    Vector randvec = normalize(unitRandom());
-    if (dot(randvec, normal) > 0.f) {
-        return randvec;
-    } else {
-        return -randvec;
-    }
-}
-template <typename T>
-T lerp(const T &a,const T &b, float t) {
-    return (a + (t * (b - a)));
-}
+
 Colourf traceRay(const Vector &origin, const Vector &direction, const int bounceCount, const Scene &scene) {
     IntersectionData intersectData = closestIntersection(origin, direction, 0.001f, INT_MAX, scene);
     if (intersectData.intersection == INT_MAX) {
@@ -141,49 +158,42 @@ Colourf traceRay(const Vector &origin, const Vector &direction, const int bounce
     float illum = intersectData.material.illumination;
     return (traceRay(intersectData.point, newDirection, bounceCount - 1, scene) + illum) * color;
 }
-Vector canvasToViewport(float x, float y, FS::RenderState &renderState) {
-    constexpr float d = 1.f;
-    const Vector viewport{ renderState.width / float(renderState.height), 1 };
-    return { x * (viewport.x / float(renderState.width)), y * (viewport.y / float(renderState.height)), d };
-}
-Colourf linearToGamma(const Colourf &color) {
-    Colourf gammacolor;
-    if (color.R > 0) {
-        gammacolor.R = std::sqrt(color.R);
-    }
-    if (color.G > 0) {
-        gammacolor.G = std::sqrt(color.G);
-    }
-    if (color.B > 0) {
-        gammacolor.B = std::sqrt(color.B);
-    }
-    return gammacolor;
-}
+// Rendering
 void pathTrace(const Scene &scene, FS::Window &window) {
     constexpr int SAMPLE_COUNT = 1024;
     constexpr int BOUNCE = 20;
 
     FS::RenderState renderState = window.getRenderState();
     const Vector origin = { 0, 0, 0 };
+    std::vector<std::thread> threads(renderState.height);
+    std::atomic<int> scanlineCount=0; 
     for (int y = 0; y < renderState.height; y++) {
-        std::cout << "\rScanlines done: " << y + 1 << "/" << renderState.height;
-        for (int x = 0; x < renderState.width; x++) {
-            FS::Colourf colourf;
-            for (int i = 0; i < SAMPLE_COUNT; i++) {
-                float samplex = x + (cubeRandom() - 0.5f);
-                float sampley = y + (cubeRandom() - 0.5f);
-                Vector direction = canvasToViewport(samplex - (renderState.width / 2.f), sampley - (renderState.height / 2.f), renderState);
-                Colourf color = traceRay(origin, direction, BOUNCE, scene);
-                colourf.R += (color.R);
-                colourf.G += (color.G);
-                colourf.B += (color.B);
+        // std::cout << "\rScanlines done: " << y + 1 << "/" << renderState.height;
+        std::mutex windowMutex;
+        threads[y] = std::thread([y, &renderState, &origin, &scene,&scanlineCount,&window,&windowMutex]() {
+            for (int x = 0; x < renderState.width; x++) {
+                FS::Colourf colourf;
+                for (int i = 0; i < SAMPLE_COUNT; i++) {
+                    float samplex = x + (cubeRandom() - 0.5f);
+                    float sampley = y + (cubeRandom() - 0.5f);
+                    Vector direction = canvasToViewport(samplex - (renderState.width / 2.f), sampley - (renderState.height / 2.f), renderState);
+                    Colourf color = traceRay(origin, direction, BOUNCE, scene);
+                    colourf.R += (color.R);
+                    colourf.G += (color.G);
+                    colourf.B += (color.B);
+                }
+                colourf = colourf / SAMPLE_COUNT;
+                uint32_t index = x + (y * renderState.width);
+                ((uint32_t *)renderState.screenBuffer)[index] = FS::rgbtoHex(linearToGamma(colourf));
             }
-            colourf = colourf / SAMPLE_COUNT;
-            uint32_t index = x + (y * renderState.width);
-            ((uint32_t *)renderState.screenBuffer)[index] = FS::rgbtoHex(linearToGamma(colourf));
-        }
-        window.swapBuffers();
+            std::lock_guard<std::mutex> lock(windowMutex);
+            window.swapBuffers();
+            scanlineCount++;
+        });
         window.processMessages();
+    }
+    for (std::thread &thread : threads) {
+        thread.join();
     }
     std::cout << "Rendered.\n";
 }
@@ -209,9 +219,17 @@ void exportToPPM(uint32_t *buffer, uint32_t width, uint32_t height, const std::s
     }
     ofs.close();
 }
+void clearScreen(uint32_t color, FS::RenderState &renderState) {
+    for (int y = 0; y < renderState.height; y++) {
+        for (int x = 0; x < renderState.width; x++) {
+            uint32_t index = x + (y * renderState.width);
+            ((uint32_t *)renderState.screenBuffer)[index] = color;
+        }
+    }
+}
 int main() {
-    constexpr int width = 720;
-    constexpr int height = 720;
+    constexpr int width = 1080;
+    constexpr int height = 1080;
 
     FS::Window window("Path Tracer", width, height);
     FS::RenderState renderState = window.getRenderState();
@@ -256,7 +274,7 @@ int main() {
     });
 
     pathTrace(scene, window);
-    
+
     while (window.isOpen()) {
         FS::Input input = window.getInput();
         if (isDown(FS::Buttons::BUTTON_R)) {
