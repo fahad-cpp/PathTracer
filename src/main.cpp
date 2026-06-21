@@ -3,6 +3,8 @@
 #include "Vector.h"
 #include "Vector2.h"
 #include <FSWindow.h>
+#include <atomic>
+#include <chrono>
 #include <climits>
 #include <cmath>
 #include <cstdint>
@@ -10,7 +12,6 @@
 #include <cstdlib>
 #include <fstream>
 #include <iostream>
-#include <mutex>
 #include <random>
 #include <string>
 #include <thread>
@@ -82,7 +83,7 @@ Vector normalize(const Vector &vec) {
 float cubeRandom() {
     // get random number between [0.f,1.f]
     static std::random_device device;
-    static std::mt19937 gen(device());
+    thread_local std::mt19937 gen(device());
     static std::uniform_real_distribution<float> dist(-1.f, 1.f);
     return dist(gen);
 }
@@ -165,8 +166,8 @@ Colourf traceRay(const Vector &origin, const Vector &direction, const int bounce
     return (traceRay(intersectData.point, newDirection, bounceCount - 1, scene) + illum) * color;
 }
 // Rendering
-void pathTraceTile(const Vector2 offset, const Vector2 tileSize, FS::Window &window, const Scene &scene, std::mutex &windowMtx, const int SAMPLE_COUNT, const int BOUNCE) {
-    FS::RenderState& renderState = window.getRenderState();
+void pathTraceTile(const Vector2 offset, const Vector2 tileSize, FS::Window &window, const Scene &scene, std::atomic_bool &finished, const int SAMPLE_COUNT, const int BOUNCE) {
+    FS::RenderState &renderState = window.getRenderState();
     const Vector origin = { 0, 0, 0 };
     for (int y = offset.y; y < (offset.y + tileSize.y); y++) {
         for (int x = offset.x; x < (offset.x + tileSize.x); x++) {
@@ -184,10 +185,8 @@ void pathTraceTile(const Vector2 offset, const Vector2 tileSize, FS::Window &win
             uint32_t index = x + (y * renderState.width);
             ((uint32_t *)renderState.screenBuffer)[index] = FS::rgbtoHex(linearToGamma(colourf));
         }
-        std::lock_guard<std::mutex> lock(windowMtx);
-        window.swapBuffers();
-        window.processMessages();
     }
+    finished = true;
 }
 void pathTrace(const Scene &scene, FS::Window &window) {
     constexpr int SAMPLE_COUNT = 1024;
@@ -195,24 +194,26 @@ void pathTrace(const Scene &scene, FS::Window &window) {
 
     FS::RenderState renderState = window.getRenderState();
     const uint32_t threadCount = std::thread::hardware_concurrency();
+    std::vector<std::atomic_bool> finished(threadCount);
     uint32_t remainingLines = renderState.height % threadCount;
     uint32_t linesPerThread = renderState.height / threadCount;
     std::vector<std::thread> threads(threadCount);
-    std::mutex windowMutex;
     uint32_t start = 0;
     for (uint32_t i = 0; i < threadCount; i++) {
         int tileY = linesPerThread + ((i < remainingLines) ? 1 : 0);
         Vector2 tileSize = { float(renderState.width), float(tileY) };
         Vector2 tileOffset = { float(0), float(start) };
-        threads[i] = std::thread(pathTraceTile, tileOffset, tileSize, std::ref(window), std::cref(scene), std::ref(windowMutex), SAMPLE_COUNT, BOUNCE);
+        threads[i] = std::thread(pathTraceTile, tileOffset, tileSize, std::ref(window), std::cref(scene), std::ref(finished[i]), SAMPLE_COUNT, BOUNCE);
         start += tileY;
     }
-    for (std::thread &thread : threads) {
-        thread.join();
+    for (uint32_t i = 0; i < threadCount; i++) {
+        while(!finished[i]){
+            window.swapBuffers();
+            window.processMessages();
+            std::this_thread::sleep_for(std::chrono::milliseconds(16));
+        }
+        threads[i].join();
     }
-
-    window.swapBuffers();
-    window.processMessages();
     std::cout << "Rendered.\n";
 }
 void exportToPPM(uint32_t *buffer, uint32_t width, uint32_t height, const std::string &file) {
