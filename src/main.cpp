@@ -96,10 +96,10 @@ Vector unitRandom() {
             break;
         }
     }
-    return randvec;
+    return normalize(randvec);
 }
 Vector hemisphereRandom(const Vector &normal) {
-    Vector randvec = normalize(unitRandom());
+    Vector randvec = unitRandom();
     if (dot(randvec, normal) > 0.f) {
         return randvec;
     } else {
@@ -161,7 +161,7 @@ Colourf traceRay(const Vector &origin, const Vector &direction, const int bounce
     if (bounceCount <= 0) {
         return { 0, 0, 0 };
     }
-    Vector newDirection = normalize(intersectData.normal + normalize(unitRandom()));
+    Vector newDirection = normalize(intersectData.normal + unitRandom());
     float illum = intersectData.material.illumination;
     return (traceRay(intersectData.point, newDirection, bounceCount - 1, scene) + illum) * color;
 }
@@ -207,7 +207,7 @@ void pathTrace(const Scene &scene, FS::Window &window) {
         start += tileY;
     }
     for (uint32_t i = 0; i < threadCount; i++) {
-        while(!finished[i]){
+        while (!finished[i]) {
             window.swapBuffers();
             window.processMessages();
             std::this_thread::sleep_for(std::chrono::milliseconds(16));
@@ -247,8 +247,8 @@ void clearScreen(uint32_t color, FS::RenderState &renderState) {
     }
 }
 int main() {
-    constexpr int width = 1080;
-    constexpr int height = 1080;
+    constexpr int width = 720;
+    constexpr int height = 720;
 
     FS::Window window("Path Tracer", width, height);
     FS::RenderState renderState = window.getRenderState();
@@ -308,5 +308,6 @@ int main() {
         }
         window.swapBuffers();
         window.processMessages();
+        std::this_thread::sleep_for(std::chrono::milliseconds(15));
     }
 }
