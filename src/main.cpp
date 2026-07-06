@@ -291,7 +291,8 @@ int main() {
             .illumination = 0.f,
         },
     });
-
+    window.removeConsole();
+    window.focus();
     pathTrace(scene, window);
 
     while (window.isOpen()) {
