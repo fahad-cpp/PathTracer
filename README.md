@@ -1,6 +1,7 @@
 # CPU Path Tracer
 
-software path tracer in C++
+Path Tracer that runs on CPU in C++.
+
 
 ## Latest Renders:<br>
 ![Path Traced Balls](renders/diffuse.png)<br>
@@ -10,35 +11,39 @@ software path tracer in C++
 
 # Building from source
 
+## Windows
 - install a c++ compiler, cmake and ninja <br>
-- for windows
 ```batch
 winget install cmake
 winget install LLVM.LLVM
 winget install Ninja-build.Ninja
 ```
-- or for linux
+- clone the repo. <br>
+```batch
+git clone --recursive https://github.com/fahad-cpp/PathTracer PathTracer
+cd PathTracer
+```
+- build using cmake with ninja and run <br>
+```batch
+cmake -S . -B build -G "Ninja" -DCMAKE_BUILD_TYPE=Release
+cmake --build build --config Release
+build\PathTracer.exe
+```
+## Linux
+- install a c++ compiler, cmake and ninja using your package manager <br>
 ```bash
 sudo pacman -S clang ninja cmake
 ```
-
-- clone the repo and generate ninja files
-```batch
-git clone https://github.com/fahad-cpp/PathTracer PathTracer
-cd PathTracer
-cmake -S . -B build -G "Ninja" -DCMAKE_BUILD_TYPE=Release
-```
-- build the project
-```batch
-cmake --build build --config Release
-```
-- run it
+- clone the repo
 ```bash
-./build/PathTracer
+git clone --recursive https://github.com/fahad-cpp/PathTracer PathTracer
+cd PathTracer
 ```
-OR
-```batch
-build\PathTracer.exe
+- build using cmake with ninja and run <br>
+```bash
+cmake -S . -B build -G "Ninja" -DCMAKE_BUILD_TYPE=Release
+cmake --build build --config Release
+./build/PathTracer
 ```
 
 # Input
