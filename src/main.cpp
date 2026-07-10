@@ -165,7 +165,6 @@ Colourf traceRay(const Vector &origin, const Vector &direction, const int bounce
     float illum = intersectData.material.illumination;
     return (traceRay(intersectData.point, newDirection, bounceCount - 1, scene) + illum) * color;
 }
-// Rendering
 void pathTraceTile(const Vector2 offset, const Vector2 tileSize, FS::Window &window, const Scene &scene, std::atomic_bool &finished, const int SAMPLE_COUNT, const int BOUNCE) {
     FS::RenderState &renderState = window.getRenderState();
     const Vector origin = { 0, 0, 0 };
@@ -191,7 +190,7 @@ void pathTraceTile(const Vector2 offset, const Vector2 tileSize, FS::Window &win
 void pathTrace(const Scene &scene, FS::Window &window) {
     constexpr int SAMPLE_COUNT = 1024;
     constexpr int BOUNCE = 20;
-
+    
     FS::RenderState renderState = window.getRenderState();
     const uint32_t threadCount = std::thread::hardware_concurrency();
     std::vector<std::atomic_bool> finished(threadCount);
@@ -216,6 +215,7 @@ void pathTrace(const Scene &scene, FS::Window &window) {
     }
     std::cout << "Rendered.\n";
 }
+//Export Given buffer to PPM P3 File
 void exportToPPM(uint32_t *buffer, uint32_t width, uint32_t height, const std::string &file) {
     if (!buffer) {
         std::cerr << "Invalid buffer :exportToPPM()\n";
@@ -246,13 +246,7 @@ void clearScreen(uint32_t color, FS::RenderState &renderState) {
         }
     }
 }
-int main() {
-    constexpr int width = 720;
-    constexpr int height = 720;
-
-    FS::Window window("Path Tracer", width, height);
-    FS::RenderState renderState = window.getRenderState();
-
+Scene createScene(){
     Scene scene;
     scene.spheres.reserve(32);
     scene.spheres.push_back({
@@ -291,22 +285,33 @@ int main() {
             .illumination = 0.f,
         },
     });
-    window.removeConsole();
-    window.focus();
+    return scene;
+}
+void handleInput(FS::Input& input,Scene& scene,FS::RenderState& renderState,FS::Window& window){
+    if (isDown(FS::Buttons::BUTTON_R)) {
+        clearScreen(0x00000000, renderState);
+        pathTrace(scene, window);
+    }
+    if (isDown(FS::Buttons::BUTTON_ESC)) {
+        window.close();
+    }
+    if (isDown(FS::Buttons::BUTTON_P)) {
+        exportToPPM((uint32_t *)renderState.screenBuffer, renderState.width, renderState.height, "output.ppm");
+    }
+}
+int main() {
+    constexpr int width = 720;
+    constexpr int height = 720;
+
+    FS::Window window("Path Tracer", width, height);
+    FS::RenderState renderState = window.getRenderState();
+    Scene scene = createScene();
+
     pathTrace(scene, window);
 
     while (window.isOpen()) {
         FS::Input input = window.getInput();
-        if (isDown(FS::Buttons::BUTTON_R)) {
-            clearScreen(0x00000000, renderState);
-            pathTrace(scene, window);
-        }
-        if (isDown(FS::Buttons::BUTTON_ESC)) {
-            window.close();
-        }
-        if (isDown(FS::Buttons::BUTTON_P)) {
-            exportToPPM((uint32_t *)renderState.screenBuffer, renderState.width, renderState.height, "output.ppm");
-        }
+        handleInput(input, scene, renderState, window);
         window.swapBuffers();
         window.processMessages();
         std::this_thread::sleep_for(std::chrono::milliseconds(15));
