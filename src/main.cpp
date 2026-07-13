@@ -19,7 +19,6 @@
 
 /*
     TODO:
-    -Metal material (reflective)
     -Glass material (refractive)
     -Focus blur
 */
@@ -281,7 +280,7 @@ Scene createScene() {
         .material = {
             .color = { 1.f, 1.f, 1.f },
             .illumination = 0.f,
-            .metalness = 0.7f,
+            .metalness = 0.3f,
         },
     });
     scene.spheres.push_back({
@@ -308,8 +307,8 @@ void handleInput(FS::Input &input, Scene &scene, FS::RenderState &renderState, F
     }
 }
 int main() {
-    constexpr int width = 1080;
-    constexpr int height = 1080;
+    constexpr int width = 720;
+    constexpr int height = 720;
 
     FS::Window window("Path Tracer", width, height);
     FS::RenderState renderState = window.getRenderState();
