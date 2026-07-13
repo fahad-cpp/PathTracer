@@ -29,15 +29,17 @@ using Vector2 = FS::Vector2;
 using Colour = FS::Colour;
 using Colourf = FS::Colourf;
 
-// Colourf skycolor1 = { 1, 1, 1 };
-// Colourf skycolor2 = { 0.5f, 0.7f, 1 };
-Colourf skycolor1 = { 0, 0, 0 };
-Colourf skycolor2 = { 0, 0, 0 };
+// Day sky
+Colourf skycolor1 = { 1, 1, 1 };
+Colourf skycolor2 = { 0.5f, 0.7f, 1 };
+// Night sky
+//  Colourf skycolor1 = { 0, 0, 0 };
+//  Colourf skycolor2 = { 0, 0, 0 };
 
 struct Material {
     Colourf color;
-    float reflectiveness;
     float illumination;
+    float metalness;
 };
 
 struct Sphere {
@@ -161,13 +163,19 @@ Colourf traceRay(const Vector &origin, const Vector &direction, const int bounce
     if (bounceCount <= 0) {
         return { 0, 0, 0 };
     }
-    Vector newDirection = normalize(intersectData.normal + unitRandom());
+    Vector newDirection;
+    if (intersectData.material.metalness <= 0.f) {
+        newDirection = normalize(intersectData.normal + unitRandom());
+    } else {
+        Vector reflected = normalize(reflectRay(normalize(-direction), intersectData.normal));
+        newDirection = reflected + (unitRandom() * (1 - intersectData.material.metalness));
+    }
     float illum = intersectData.material.illumination;
     return (traceRay(intersectData.point, newDirection, bounceCount - 1, scene) + illum) * color;
 }
 void pathTraceTile(const Vector2 offset, const Vector2 tileSize, FS::Window &window, const Scene &scene, std::atomic_bool &finished, const int SAMPLE_COUNT, const int BOUNCE) {
     FS::RenderState &renderState = window.getRenderState();
-    const Vector origin = { 0, 0, 0 };
+    const Vector origin = { 0, 0, -0.5f };
     for (int y = offset.y; y < (offset.y + tileSize.y); y++) {
         for (int x = offset.x; x < (offset.x + tileSize.x); x++) {
             FS::Colourf colourf;
@@ -190,7 +198,7 @@ void pathTraceTile(const Vector2 offset, const Vector2 tileSize, FS::Window &win
 void pathTrace(const Scene &scene, FS::Window &window) {
     constexpr int SAMPLE_COUNT = 1024;
     constexpr int BOUNCE = 20;
-    
+
     FS::RenderState renderState = window.getRenderState();
     const uint32_t threadCount = std::thread::hardware_concurrency();
     std::vector<std::atomic_bool> finished(threadCount);
@@ -215,7 +223,7 @@ void pathTrace(const Scene &scene, FS::Window &window) {
     }
     std::cout << "Rendered.\n";
 }
-//Export Given buffer to PPM P3 File
+// Export Given buffer to PPM P3 File
 void exportToPPM(uint32_t *buffer, uint32_t width, uint32_t height, const std::string &file) {
     if (!buffer) {
         std::cerr << "Invalid buffer :exportToPPM()\n";
@@ -246,7 +254,7 @@ void clearScreen(uint32_t color, FS::RenderState &renderState) {
         }
     }
 }
-Scene createScene(){
+Scene createScene() {
     Scene scene;
     scene.spheres.reserve(32);
     scene.spheres.push_back({
@@ -254,8 +262,8 @@ Scene createScene(){
         .radius = 0.2f,
         .material = {
             .color = { 1, 0.1f, 0.1f },
-            .reflectiveness = 0.f,
-            .illumination = 1.f,
+            .illumination = 0.f,
+            .metalness = 0.f,
         },
     });
     scene.spheres.push_back({
@@ -263,31 +271,31 @@ Scene createScene(){
         .radius = 0.2f,
         .material = {
             .color = { 0.1f, 1, 0.1f },
-            .reflectiveness = 0.f,
             .illumination = 0.f,
+            .metalness = 0.f,
         },
     });
     scene.spheres.push_back({
         .center = Vector{ 0.5f, 0, 1 },
         .radius = 0.2f,
         .material = {
-            .color = { 0.1f, 0.1f, 1 },
-            .reflectiveness = 0.f,
-            .illumination = 1.f,
+            .color = { 1.f, 1.f, 1.f },
+            .illumination = 0.f,
+            .metalness = 0.7f,
         },
     });
     scene.spheres.push_back({
         .center = Vector{ 0, 100.2f, 0 },
         .radius = 100.f,
         .material = {
-            .color = { 1, 1, 1 },
-            .reflectiveness = 0.f,
+            .color = { 1, 1.f, 0.1f },
             .illumination = 0.f,
+            .metalness = 0.f,
         },
     });
     return scene;
 }
-void handleInput(FS::Input& input,Scene& scene,FS::RenderState& renderState,FS::Window& window){
+void handleInput(FS::Input &input, Scene &scene, FS::RenderState &renderState, FS::Window &window) {
     if (isDown(FS::Buttons::BUTTON_R)) {
         clearScreen(0x00000000, renderState);
         pathTrace(scene, window);
@@ -300,8 +308,8 @@ void handleInput(FS::Input& input,Scene& scene,FS::RenderState& renderState,FS::
     }
 }
 int main() {
-    constexpr int width = 720;
-    constexpr int height = 720;
+    constexpr int width = 1080;
+    constexpr int height = 1080;
 
     FS::Window window("Path Tracer", width, height);
     FS::RenderState renderState = window.getRenderState();

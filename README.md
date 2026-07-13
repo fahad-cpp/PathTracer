@@ -4,9 +4,9 @@ Path Tracer that runs on CPU in C++.
 
 
 ## Latest Renders:<br>
-![Path Traced Balls](renders/diffuse.png)<br>
 ![Glowing Ball](renders/glow.png)<br>
-![Coloured Balls](renders/colored.png)
+![Coloured Balls](renders/colored.png)<br>
+![Reflective Ball](renders/reflective.png)
 
 
 # Building from source
