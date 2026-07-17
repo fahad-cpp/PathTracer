@@ -90,7 +90,7 @@ float cubeRandom() {
 }
 Vector unitRandom() {
     Vector randvec;
-    // Very inefficient , fix later
+    // TODO:Very inefficient , fix later
     while (true) {
         randvec = { cubeRandom(), cubeRandom(), cubeRandom() };
         if (length(randvec) <= 1.f) {
@@ -174,7 +174,7 @@ Colourf traceRay(const Vector &origin, const Vector &direction, const int bounce
 }
 void pathTraceTile(const Vector2 offset, const Vector2 tileSize, FS::Window &window, const Scene &scene, std::atomic_bool &finished, const int SAMPLE_COUNT, const int BOUNCE) {
     FS::RenderState &renderState = window.getRenderState();
-    const Vector origin = { 0, 0, -0.5f };
+    const Vector origin = { 0, 0, 0 };
     for (int y = offset.y; y < (offset.y + tileSize.y); y++) {
         for (int x = offset.x; x < (offset.x + tileSize.x); x++) {
             FS::Colourf colourf;
@@ -195,7 +195,7 @@ void pathTraceTile(const Vector2 offset, const Vector2 tileSize, FS::Window &win
     finished = true;
 }
 void pathTrace(const Scene &scene, FS::Window &window) {
-    constexpr int SAMPLE_COUNT = 1024;
+    constexpr int SAMPLE_COUNT = 128;
     constexpr int BOUNCE = 20;
 
     FS::RenderState renderState = window.getRenderState();
@@ -262,7 +262,7 @@ Scene createScene() {
         .material = {
             .color = { 1, 0.1f, 0.1f },
             .illumination = 0.f,
-            .metalness = 0.f,
+            .metalness = 1.f,
         },
     });
     scene.spheres.push_back({
@@ -278,18 +278,18 @@ Scene createScene() {
         .center = Vector{ 0.5f, 0, 1 },
         .radius = 0.2f,
         .material = {
-            .color = { 1.f, 1.f, 1.f },
+            .color = { 0.1f, 0.1f, 1.f },
             .illumination = 0.f,
-            .metalness = 0.3f,
+            .metalness = 0.5f,
         },
     });
     scene.spheres.push_back({
         .center = Vector{ 0, 100.2f, 0 },
         .radius = 100.f,
         .material = {
-            .color = { 1, 1.f, 0.1f },
+            .color = { 1, 1, 0.1f },
             .illumination = 0.f,
-            .metalness = 0.f,
+            .metalness = 0.3f,
         },
     });
     return scene;
@@ -310,7 +310,7 @@ int main() {
     constexpr int width = 720;
     constexpr int height = 720;
 
-    FS::Window window("Path Tracer", width, height);
+    FS::Window window("", width, height);
     FS::RenderState renderState = window.getRenderState();
     Scene scene = createScene();
 
