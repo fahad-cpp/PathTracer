@@ -174,7 +174,7 @@ Colourf traceRay(const Vector &origin, const Vector &direction, const int bounce
 }
 void pathTraceTile(const Vector2 offset, const Vector2 tileSize, FS::Window &window, const Scene &scene, std::atomic_bool &finished, const int SAMPLE_COUNT, const int BOUNCE) {
     FS::RenderState &renderState = window.getRenderState();
-    const Vector origin = { 0, 0, 0 };
+    const Vector origin = { 0, 0, -0.5f };
     for (int y = offset.y; y < (offset.y + tileSize.y); y++) {
         for (int x = offset.x; x < (offset.x + tileSize.x); x++) {
             FS::Colourf colourf;
@@ -195,7 +195,7 @@ void pathTraceTile(const Vector2 offset, const Vector2 tileSize, FS::Window &win
     finished = true;
 }
 void pathTrace(const Scene &scene, FS::Window &window) {
-    constexpr int SAMPLE_COUNT = 128;
+    constexpr int SAMPLE_COUNT = 1024;
     constexpr int BOUNCE = 20;
 
     FS::RenderState renderState = window.getRenderState();
@@ -289,7 +289,7 @@ Scene createScene() {
         .material = {
             .color = { 1, 1, 0.1f },
             .illumination = 0.f,
-            .metalness = 0.3f,
+            .metalness = 0.f,
         },
     });
     return scene;
@@ -310,7 +310,7 @@ int main() {
     constexpr int width = 720;
     constexpr int height = 720;
 
-    FS::Window window("", width, height);
+    FS::Window window("Path Tracer", width, height);
     FS::RenderState renderState = window.getRenderState();
     Scene scene = createScene();
 
