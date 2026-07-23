@@ -13,7 +13,7 @@ add_executable(PathTracer
 )
 
 target_link_libraries(PathTracer PRIVATE 
-    FSWindow
+    FSWindow pthread
 )
 
 if(MSVC)

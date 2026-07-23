@@ -4,6 +4,7 @@
 #include "Vector2.h"
 #include <FSWindow.h>
 #include <atomic>
+#include <cfloat>
 #include <chrono>
 #include <climits>
 #include <cmath>
@@ -65,7 +66,7 @@ Vector canvasToViewport(float x, float y, FS::RenderState &renderState) {
     const Vector viewport{ renderState.width / float(renderState.height), 1 };
     return { x * (viewport.x / float(renderState.width)), y * (viewport.y / float(renderState.height)), d };
 }
-Colourf linearToGamma(const Colourf &color) {
+Colourf linearToGamma(const Colourf color) {
     Colourf gammacolor;
     if (color.R > 0) {
         gammacolor.R = std::sqrt(color.R);
@@ -78,14 +79,14 @@ Colourf linearToGamma(const Colourf &color) {
     }
     return gammacolor;
 }
-Vector normalize(const Vector &vec) {
+Vector normalize(const Vector vec) {
     return vec / length(vec);
 }
 // Random
 float cubeRandom() {
     // get random number between [0.f,1.f]
     static std::random_device device;
-    thread_local std::mt19937 gen(device());
+    static std::mt19937 gen(device());
     static std::uniform_real_distribution<float> dist(-1.f, 1.f);
     return dist(gen);
 }
@@ -100,7 +101,7 @@ Vector unitRandom() {
     }
     return normalize(randvec);
 }
-Vector hemisphereRandom(const Vector &normal) {
+Vector hemisphereRandom(const Vector normal) {
     Vector randvec = unitRandom();
     if (dot(randvec, normal) > 0.f) {
         return randvec;
@@ -109,7 +110,7 @@ Vector hemisphereRandom(const Vector &normal) {
     }
 }
 // Math helpers
-Vector reflectRay(const Vector &R, const Vector &N) {
+Vector reflectRay(const Vector R, const Vector N) {
     return (2 * (N * dot(R, N)) - R);
 }
 template <typename T>
@@ -117,8 +118,8 @@ T lerp(const T &a, const T &b, float t) {
     return (a + (t * (b - a)));
 }
 // Core raytracing
-IntersectionData closestIntersection(const Vector &origin, const Vector &direction, float min, float max, const Scene &scene) {
-    float minT = INT_MAX;
+IntersectionData closestIntersection(const Vector origin, const Vector direction, float min, float max, const Scene &scene) {
+    float minT = FLT_MAX;
     Material hitMaterial = {};
     Vector hitNormal = {};
     Vector hitPoint = {};
@@ -130,7 +131,7 @@ IntersectionData closestIntersection(const Vector &origin, const Vector &directi
         float c = dot(CO, CO) - (sphere.radius * sphere.radius);
 
         float discriminant = (b * b) - (4 * a * c);
-        float t = INT_MAX;
+        float t = FLT_MAX;
 
         if (discriminant >= 0) {
             t = (-b - sqrt(discriminant)) / (2 * a);
@@ -154,9 +155,9 @@ IntersectionData closestIntersection(const Vector &origin, const Vector &directi
     return intData;
 }
 
-Colourf traceRay(const Vector &origin, const Vector &direction, const int bounceCount, const Scene &scene) {
-    IntersectionData intersectData = closestIntersection(origin, direction, 0.001f, INT_MAX, scene);
-    if (intersectData.intersection == INT_MAX) {
+Colourf traceRay(const Vector origin, const Vector direction, const int bounceCount, const Scene &scene) {
+    IntersectionData intersectData = closestIntersection(origin, direction, 0.001f, FLT_MAX, scene);
+    if (intersectData.intersection == FLT_MAX) {
         return lerp(skycolor2, skycolor1, (direction.y + 0.5f));
     }
     Colourf color = intersectData.material.color;
