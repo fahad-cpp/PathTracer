@@ -1,16 +1,8 @@
-#include "Colour.h"
-#include "Input.h"
-#include "Vector.h"
-#include "Vector2.h"
 #include <FSWindow.h>
 #include <atomic>
 #include <cfloat>
-#include <chrono>
-#include <climits>
 #include <cmath>
 #include <cstdint>
-#include <cstdio>
-#include <cstdlib>
 #include <fstream>
 #include <iostream>
 #include <random>
@@ -200,7 +192,7 @@ void pathTrace(const Scene &scene, FS::Window &window) {
     constexpr int SAMPLE_COUNT = 1024;
     constexpr int BOUNCE = 20;
 
-    FS::RenderState renderState = window.getRenderState();
+    FS::RenderState& renderState = window.getRenderState();
     const uint32_t threadCount = std::thread::hardware_concurrency();
     std::vector<std::atomic_bool> finished(threadCount);
     uint32_t remainingLines = renderState.height % threadCount;
@@ -313,9 +305,11 @@ int main() {
     constexpr int height = 720;
 
     FS::Window window("Path Tracer", width, height);
-    FS::RenderState renderState = window.getRenderState();
+    FS::RenderState& renderState = window.getRenderState();
     Scene scene = createScene();
 
+    window.swapBuffers();
+    window.processMessages();
     pathTrace(scene, window);
 
     while (window.isOpen()) {
