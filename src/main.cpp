@@ -240,8 +240,8 @@ void exportToPPM(uint32_t *buffer, uint32_t width, uint32_t height, const std::s
     ofs.close();
 }
 void clearScreen(uint32_t color, FS::RenderState &renderState) {
-    for (int y = 0; y < renderState.height; y++) {
-        for (int x = 0; x < renderState.width; x++) {
+    for (uint32_t y = 0; y < renderState.height; y++) {
+        for (uint32_t x = 0; x < renderState.width; x++) {
             uint32_t index = x + (y * renderState.width);
             ((uint32_t *)renderState.screenBuffer)[index] = color;
         }

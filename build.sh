@@ -1,5 +1,6 @@
-CONFIG=Release
-rm -f build/PathTracer
-cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE="$CONFIG" -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
-cmake --build build --config "$CONFIG" --parallel
-build/PathTracer
+PRESET=clang-release
+rm -f build/$PRESET/PathTracer
+cmake --preset $PRESET
+cmake --build --preset $PRESET
+cp build/$PRESET/compile_commands.json build/
+build/$PRESET/PathTracer

@@ -1,7 +1,8 @@
 @echo off
-set "CONFIG=Release"
-if exist build\PathTracer.exe del build\PathTracer.exe
-cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=%CONFIG% -DCMAKE_EXPORT_COMPILE_COMMANDS=ON >nul
-cmake --build build --config %CONFIG% --parallel 2>nul
+set "PRESET=clang-release"
+if exist build\%PRESET%\PathTracer.exe del build\%PRESET%\PathTracer.exe
+cmake --preset %PRESET% >nul
+cmake --build --preset %PRESET% 2>nul
+copy build\$PRESET\compile_commands.json build\ >nul
 echo PathTracer.exe::
-build\PathTracer.exe
+build\%PRESET%\PathTracer.exe
