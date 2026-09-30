@@ -11,10 +11,15 @@ add_subdirectory(vendor/FSWindow)
 add_executable(PathTracer 
     src/main.cpp
 )
-
-target_link_libraries(PathTracer PRIVATE 
-    FSWindow pthread
-)
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    target_link_libraries(PathTracer PRIVATE 
+        FSWindow pthread
+    )
+else()
+    target_link_libraries(PathTracer PRIVATE 
+        FSWindow
+    )
+endif()
 
 if(MSVC)
     target_compile_options(PathTracer PRIVATE 

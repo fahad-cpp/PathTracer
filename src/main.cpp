@@ -301,8 +301,8 @@ void handleInput(FS::Input &input, Scene &scene, FS::RenderState &renderState, F
     }
 }
 int main() {
-    constexpr int width = 720;
-    constexpr int height = 720;
+    constexpr int width = 1080;
+    constexpr int height = 1080;
 
     FS::Window window("Path Tracer", width, height);
     FS::RenderState& renderState = window.getRenderState();
