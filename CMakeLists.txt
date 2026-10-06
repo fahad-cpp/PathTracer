@@ -9,7 +9,9 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 add_subdirectory(vendor/FSWindow)
 
 add_executable(PathTracer 
-    src/main.cpp
+    src/Main.cpp
+    src/PathTracer.cpp
+    src/BVH.cpp
 )
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     target_link_libraries(PathTracer PRIVATE 
@@ -28,6 +30,7 @@ if(MSVC)
     )
 else()
     target_compile_options(PathTracer PRIVATE 
+        -g
         -Wall 
         -Wextra 
         -Wpedantic

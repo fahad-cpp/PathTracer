@@ -4,6 +4,9 @@ Path Tracer that runs on CPU in C++.
 
 
 ## Latest Renders:<br>
+- 07/10/2026 - implemted BVH and improved structure
+
+![LightBall](renders/lightball.png)<br>
 ![Glowing Ball](renders/glow.png)<br>
 ![Coloured Balls](renders/colored.png)<br>
 ![Reflective Ball](renders/reflective.png)
