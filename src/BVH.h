@@ -12,6 +12,8 @@ struct BVHNode {
 };
 class BVH {
   public:
+    bool visualize = false;
+    std::vector<AABB> visualizationAABB;
     BVHNode *root = nullptr;
     void build(Scene &scene);
     IntersectionData lookup(const Vector origin, const Vector direction, float min, float max, BVHNode *node);
@@ -21,7 +23,6 @@ class BVH {
     void updateAABB(BVHNode *node);
     void subdivide(BVHNode *node);
     void cleanupNode(BVHNode *node);
-    void drawBB();
 };
 
 bool RayIntersectAABB(const Vector origin, const Vector direction, const AABB box);

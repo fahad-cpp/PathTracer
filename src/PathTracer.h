@@ -3,24 +3,25 @@
 #include "BVH.h"
 #include <FSWindow.h>
 #include <string>
-struct PathTracerConfig{
+struct PathTracerConfig {
     uint32_t sampleCount;
     uint32_t bounceCount;
 };
 class PathTracer {
-    BVH bvh ={};
-    FS::Window* mWindow=nullptr;
+    BVH bvh = {};
+    FS::Window *mWindow = nullptr;
     Scene mScene;
-    //default config
+    // default config
     PathTracerConfig config = {
-        .sampleCount = 20,
+        .sampleCount = 1024,
         .bounceCount = 20
     };
+
   public:
     PathTracer(const std::string &name, const uint32_t width, const uint32_t height);
     ~PathTracer();
 
-    void setScene(Scene& scene);
+    void setScene(Scene &scene);
     void pathTrace();
     void update();
     bool isRunning();
@@ -28,7 +29,7 @@ class PathTracer {
 
   private:
     void handleInput();
-    //core raytracing
+    // core raytracing
     IntersectionData closestIntersection(const Vector origin, const Vector direction, float min, float max);
     Colourf traceRay(const Vector origin, const Vector direction, const int bounceCount);
     void pathTraceTile(const Vector2 offset, const Vector2 tileSize, std::atomic_bool &finished, const int SAMPLE_COUNT, const int BOUNCE);

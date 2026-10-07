@@ -37,7 +37,7 @@ Scene createScene() {
         },
     });
     scene.spheres.push_back({
-        .center = Vector{ 0, 100.2f, 0 },
+        .center = Vector{ 0, -100.2f, 0 },
         .radius = 100.f,
         .material = {
             .color = { 1, 1, 0.1f },
@@ -46,8 +46,8 @@ Scene createScene() {
         },
     });
     scene.spheres.push_back({
-        .center = Vector{ 0, -0.5f, 1.f },
-        .radius = .1f,
+        .center = Vector{ 0, 100.f, -100.f },
+        .radius = 50.f,
         .material = {
             .color = { 1, 1, 1 },
             .illumination = 1.f,
@@ -57,7 +57,7 @@ Scene createScene() {
     return scene;
 }
 int main() {
-    constexpr int width = 1080;
+    constexpr int width = 1920;
     constexpr int height = 1080;
 
     PathTracer pathTracer("Path Tracer", width, height);
@@ -65,7 +65,7 @@ int main() {
     pathTracer.setScene(scene);
 
     pathTracer.setConfig({
-        .sampleCount = 2048,
+        .sampleCount = 1024,
         .bounceCount = 20
     });
 

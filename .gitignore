@@ -1,4 +1,6 @@
 .vscode
+*.etl
+*.etl.*
 .cache
 build
 bin

@@ -6,18 +6,20 @@
 #include <random>
 #include <thread>
 
-
 // Day sky
-// Colourf skycolor1 = { 1, 1, 1 };
-// Colourf skycolor2 = { 0.5f, 0.7f, 1 };
+#if 0
+Colourf skycolor1 = { 1, 1, 1 };
+Colourf skycolor2 = { 0.5f, 0.7f, 1 };
+#else
 // Night sky
 Colourf skycolor1 = { 0, 0, 0 };
 Colourf skycolor2 = { 0, 0, 0 };
+#endif
 // Conversion Utils
 static Vector canvasToViewport(float x, float y, FS::RenderState &renderState) {
     constexpr float d = 1.f;
     const Vector viewport{ renderState.width / float(renderState.height), 1 };
-    return { x * (viewport.x / float(renderState.width)), y * (viewport.y / float(renderState.height)), d };
+    return { x * (viewport.x / float(renderState.width)), (1 - y) * (viewport.y / float(renderState.height)), d };
 }
 static Colourf linearToGamma(const Colourf color) {
     Colourf gammacolor;
@@ -81,7 +83,7 @@ void PathTracer::pathTrace() {
     FS::Window &window = *this->mWindow;
     FS::RenderState &renderState = window.getRenderState();
     uint32_t segments = std::sqrt(std::thread::hardware_concurrency());
-    if(segments < std::sqrt(std::thread::hardware_concurrency())){
+    if (segments < std::sqrt(std::thread::hardware_concurrency())) {
         segments++;
     }
     const uint32_t threadCount = segments * segments;
@@ -94,7 +96,7 @@ void PathTracer::pathTrace() {
         int ysegment = (i / segments);
         int xsegment = (i % segments);
         Vector2 tileSize = { segmentwidth, segmentHeight };
-        Vector2 tileOffset = { xsegment * segmentwidth,ysegment * segmentHeight };
+        Vector2 tileOffset = { xsegment * segmentwidth, ysegment * segmentHeight };
         threads[i] = std::thread(&PathTracer::pathTraceTile, this, tileOffset, tileSize, std::ref(finished[i]), config.sampleCount, config.bounceCount);
     }
     for (uint32_t i = 0; i < threadCount; i++) {
@@ -166,7 +168,7 @@ Colourf PathTracer::traceRay(const Vector origin, const Vector direction, const 
 }
 void PathTracer::pathTraceTile(const Vector2 offset, const Vector2 tileSize, std::atomic_bool &finished, const int SAMPLE_COUNT, const int BOUNCE) {
     FS::RenderState &renderState = mWindow->getRenderState();
-    const Vector origin = { 0, 0, -0.5f };
+    const Vector origin = { 0.f, 0.f, -0.5f };
     for (int y = offset.y; y < (offset.y + tileSize.y); y++) {
         for (int x = offset.x; x < (offset.x + tileSize.x); x++) {
             FS::Colourf colourf;

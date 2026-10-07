@@ -5,6 +5,9 @@
 #define LAST_NODE_COUNT 1
 constexpr float epsilon = std::numeric_limits<float>::epsilon();
 void BVH::build(Scene &scene) {
+    if (visualize) {
+        visualizationAABB.reserve(2 * scene.spheres.size() - 1);
+    }
     // build root node
     root = new BVHNode;
     root->spheres.reserve(scene.spheres.size());
@@ -31,12 +34,10 @@ IntersectionData BVH::lookup(const Vector origin, const Vector direction, float 
         for (const Sphere &sphere : node->spheres) {
             IntersectionData raySphere = RayIntersectSphere(origin, direction, sphere);
             if (
-                raySphere.intersection < intersection.intersection && 
-                (raySphere.intersection >= min) && 
-                (raySphere.intersection <= max)
-            ) {
+                raySphere.intersection < intersection.intersection &&
+                (raySphere.intersection >= min) &&
+                (raySphere.intersection <= max)) {
                 intersection = raySphere;
-
             }
         }
         return intersection;
@@ -50,7 +51,7 @@ IntersectionData BVH::lookup(const Vector origin, const Vector direction, float 
 }
 void BVH::updateAABB(BVHNode *node) {
     Vector min = { FLT_MAX, FLT_MAX, FLT_MAX };
-    Vector max = { FLT_MIN, FLT_MIN, FLT_MIN };
+    Vector max = { -FLT_MAX, -FLT_MAX, -FLT_MAX };
     for (const Sphere &sphere : node->spheres) {
         Vector sphereMin = sphere.center - sphere.radius;
         Vector sphereMax = sphere.center + sphere.radius;
@@ -74,6 +75,9 @@ void BVH::updateAABB(BVHNode *node) {
             max.z = sphereMax.z;
         }
     }
+    if (visualize) {
+        visualizationAABB.push_back(node->aabb);
+    }
     node->aabb = { min, max };
 }
 
@@ -82,8 +86,8 @@ void BVH::subdivide(BVHNode *node) {
         return;
     }
     Vector dist = node->aabb.max - node->aabb.min;
-    std::vector<Sphere> leftSpheres;
-    std::vector<Sphere> rightSpheres;
+    std::vector<Sphere> leftSpheres = {};
+    std::vector<Sphere> rightSpheres = {};
 
     if ((dist.x > dist.y) && (dist.x > dist.z)) {
         // x is the longest axis
@@ -120,7 +124,7 @@ void BVH::subdivide(BVHNode *node) {
     if (
         leftSpheres.size() == node->spheres.size() ||
         rightSpheres.size() == node->spheres.size()) {
-        return;
+        //return;
     }
 
     if (leftSpheres.size()) {
