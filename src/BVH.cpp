@@ -1,6 +1,7 @@
 #define NOMINMAX
 #include "BVH.h"
 #include "Utils.h"
+#include <assert.h>
 
 #define LAST_NODE_COUNT 1
 constexpr float epsilon = std::numeric_limits<float>::epsilon();
@@ -82,6 +83,7 @@ void BVH::updateAABB(BVHNode *node) {
 }
 
 void BVH::subdivide(BVHNode *node) {
+    assert(LAST_NODE_COUNT > 0);
     if (node->spheres.size() <= LAST_NODE_COUNT) {
         return;
     }
