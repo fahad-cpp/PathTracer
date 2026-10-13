@@ -46,7 +46,7 @@ Scene createScene() {
         },
     });
     scene.spheres.push_back({
-        .center = Vector{ 0, 100.f, -100.f },
+        .center = Vector{ 0, 100.f, 100.f },
         .radius = 50.f,
         .material = {
             .color = { 1, 1, 1 },
@@ -57,8 +57,8 @@ Scene createScene() {
     return scene;
 }
 int main() {
-    constexpr int width = 1920;
-    constexpr int height = 1080;
+    constexpr int width = 720;
+    constexpr int height = 720;
 
     PathTracer pathTracer("Path Tracer", width, height);
     Scene scene = createScene();
