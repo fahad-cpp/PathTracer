@@ -11,6 +11,8 @@ struct BVHNode {
     std::vector<Sphere> spheres;
 };
 class BVH {
+  // memory stats
+  uint32_t nodesAllocated=0;
   public:
     bool visualize = false;
     std::vector<AABB> visualizationAABB;

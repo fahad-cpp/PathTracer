@@ -11,6 +11,7 @@ void BVH::build(Scene &scene) {
     }
     // build root node
     root = new BVHNode;
+    nodesAllocated++;
     root->spheres.reserve(scene.spheres.size());
     for (const Sphere &sphere : scene.spheres) {
         root->spheres.push_back(sphere);
@@ -126,11 +127,12 @@ void BVH::subdivide(BVHNode *node) {
     if (
         leftSpheres.size() == node->spheres.size() ||
         rightSpheres.size() == node->spheres.size()) {
-        //return;
+        return;
     }
 
     if (leftSpheres.size()) {
         BVHNode *left = new BVHNode;
+        nodesAllocated++;
         left->left = nullptr;
         left->right = nullptr;
         left->spheres = leftSpheres;
@@ -140,6 +142,7 @@ void BVH::subdivide(BVHNode *node) {
     }
     if (rightSpheres.size()) {
         BVHNode *right = new BVHNode;
+        nodesAllocated++;
         right->left = nullptr;
         right->right = nullptr;
         right->spheres = rightSpheres;

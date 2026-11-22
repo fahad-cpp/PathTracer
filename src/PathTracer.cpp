@@ -7,7 +7,7 @@
 #include <thread>
 
 // Day sky
-#if 0
+#if 1
 Colourf skycolor1 = { 1, 1, 1 };
 Colourf skycolor2 = { 0.5f, 0.7f, 1 };
 #else
@@ -127,14 +127,14 @@ void PathTracer::setConfig(PathTracerConfig config) {
 void PathTracer::handleInput() {
     FS::Input &input = mWindow->getInput();
     FS::RenderState &renderState = mWindow->getRenderState();
-    if (isDown(FS::Buttons::BUTTON_R)) {
+    if (input.isDown(FS::BUTTON_R)) {
         clearScreen(0x00000000);
         pathTrace();
     }
-    if (isDown(FS::Buttons::BUTTON_ESC)) {
+    if (input.isDown(FS::BUTTON_ESC)) {
         mWindow->close();
     }
-    if (isDown(FS::Buttons::BUTTON_P)) {
+    if (input.isDown(FS::BUTTON_P)) {
         exportToPPM((uint32_t *)renderState.screenBuffer, renderState.width, renderState.height, "output.ppm");
     }
 }
@@ -168,7 +168,7 @@ Colourf PathTracer::traceRay(const Vector origin, const Vector direction, const 
 }
 void PathTracer::pathTraceTile(const Vector2 offset, const Vector2 tileSize, std::atomic_bool &finished, const int SAMPLE_COUNT, const int BOUNCE) {
     FS::RenderState &renderState = mWindow->getRenderState();
-    const Vector origin = { 0.f, 0.f, -0.5f };
+    const Vector origin = { 0.f, 0.f, -100.f };
     for (int y = offset.y; y < (offset.y + tileSize.y); y++) {
         for (int x = offset.x; x < (offset.x + tileSize.x); x++) {
             FS::Colourf colourf;
