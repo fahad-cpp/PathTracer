@@ -97,7 +97,7 @@ void PathTracer::pathTrace() {
         int xsegment = (i % segments);
         Vector2 tileSize = { segmentwidth, segmentHeight };
         Vector2 tileOffset = { xsegment * segmentwidth, ysegment * segmentHeight };
-        threads[i] = std::thread(&PathTracer::pathTraceTile, this, tileOffset, tileSize, std::ref(finished[i]), config.sampleCount, config.bounceCount);
+        threads[i] = std::thread(&PathTracer::pathTraceTile, this, mScene.cameraPos, tileOffset, tileSize, std::ref(finished[i]), config.sampleCount, config.bounceCount);
     }
     for (uint32_t i = 0; i < threadCount; i++) {
         while (!finished[i]) {
@@ -166,9 +166,8 @@ Colourf PathTracer::traceRay(const Vector origin, const Vector direction, const 
     float illum = intersectData.material.illumination;
     return (traceRay(intersectData.point, newDirection, bounceCount - 1) + illum) * color;
 }
-void PathTracer::pathTraceTile(const Vector2 offset, const Vector2 tileSize, std::atomic_bool &finished, const int SAMPLE_COUNT, const int BOUNCE) {
+void PathTracer::pathTraceTile(const Vector origin, const Vector2 offset, const Vector2 tileSize, std::atomic_bool &finished, const int SAMPLE_COUNT, const int BOUNCE) {
     FS::RenderState &renderState = mWindow->getRenderState();
-    const Vector origin = { 0.f, 0.f, -100.f };
     for (int y = offset.y; y < (offset.y + tileSize.y); y++) {
         for (int x = offset.x; x < (offset.x + tileSize.x); x++) {
             FS::Colourf colourf;

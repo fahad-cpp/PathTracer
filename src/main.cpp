@@ -10,6 +10,7 @@ Scene createScene() {
     Scene scene;
     constexpr uint32_t NUM_SPHERES = 1000;
     scene.spheres.reserve(NUM_SPHERES);
+    scene.cameraPos = {0.f,0.f,-100.f};
     // scene.spheres.push_back({
     //     .center = Vector{ -0.5f, 0, 1 },
     //     .radius = 0.2f,
@@ -61,7 +62,10 @@ Scene createScene() {
     static std::uniform_real_distribution<float> unitDist(0.f,1.f);
     static std::uniform_real_distribution<float> oneToTenDist(1.f, 10.f);
     for (uint32_t i = 0; i < NUM_SPHERES; ++i) {
-        const Vector center = {signedHundredDist(gen),signedHundredDist(gen),signedHundredDist(gen)};
+        Vector center = {signedHundredDist(gen),signedHundredDist(gen),signedHundredDist(gen)};
+        while(length(center - scene.cameraPos) < 10.f){
+            center = {signedHundredDist(gen),signedHundredDist(gen),signedHundredDist(gen)};
+        }
         const Material material = {
             .color = {unitDist(gen),unitDist(gen),unitDist(gen)},
             .illumination = 0.f,
@@ -85,7 +89,7 @@ int main() {
     Scene scene = createScene();
     pathTracer.setScene(scene);
 
-    pathTracer.setConfig({ .sampleCount = 1024,
+    pathTracer.setConfig({ .sampleCount = 512,
                            .bounceCount = 20 });
 
     pathTracer.pathTrace();

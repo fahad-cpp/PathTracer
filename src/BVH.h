@@ -11,8 +11,10 @@ struct BVHNode {
     std::vector<Sphere> spheres;
 };
 class BVH {
-  // memory stats
+  // stats
   uint32_t nodesAllocated=0;
+  uint32_t maxLeafElements=0;
+  uint32_t minLeafElements=UINT32_MAX;
   public:
     bool visualize = false;
     std::vector<AABB> visualizationAABB;

@@ -86,6 +86,8 @@ void BVH::updateAABB(BVHNode *node) {
 void BVH::subdivide(BVHNode *node) {
     assert(LAST_NODE_COUNT > 0);
     if (node->spheres.size() <= LAST_NODE_COUNT) {
+        minLeafElements = std::min(minLeafElements, static_cast<uint32_t>(node->spheres.size()));
+        maxLeafElements = std::max(maxLeafElements, static_cast<uint32_t>(node->spheres.size()));
         return;
     }
     Vector dist = node->aabb.max - node->aabb.min;
@@ -127,6 +129,8 @@ void BVH::subdivide(BVHNode *node) {
     if (
         leftSpheres.size() == node->spheres.size() ||
         rightSpheres.size() == node->spheres.size()) {
+        minLeafElements = std::min(minLeafElements, static_cast<uint32_t>(node->spheres.size()));
+        maxLeafElements = std::max(maxLeafElements, static_cast<uint32_t>(node->spheres.size()));
         return;
     }
 

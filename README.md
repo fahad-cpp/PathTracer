@@ -4,8 +4,9 @@ Path Tracer that runs on CPU in C++.
 
 
 ## Latest Renders:<br>
-- 07/10/2026 - implemted BVH and improved structure
+- 23/11/26 fixed BVH construction, updated FSWindow, remove hardcoded camera , made 1kballs scene
 
+![1kballs](renders/1kballs.png)<br>
 ![LightBall](renders/lightball.png)<br>
 ![LightBall](renders/lightballwide.png)<br>
 ![Glowing Ball](renders/glow.png)<br>

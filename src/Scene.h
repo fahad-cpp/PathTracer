@@ -16,6 +16,7 @@ struct Sphere {
 };
 
 struct Scene {
+    Vector cameraPos;
     std::vector<Sphere> spheres;
 };
 
