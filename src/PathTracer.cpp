@@ -42,7 +42,19 @@ static float cubeRandom() {
     static std::uniform_real_distribution<float> dist(-1.f, 1.f);
     return dist(gen);
 }
-static Vector unitRandom() {
+static Vector2 random2(){
+    Vector2 randvec;
+    // TODO:Very inefficient , fix later
+    while (true) {
+        randvec = { cubeRandom(), cubeRandom() };
+        if (length(randvec) <= 1.f) {
+            break;
+        }
+    }
+    return randvec;
+
+}
+static Vector random3(){
     Vector randvec;
     // TODO:Very inefficient , fix later
     while (true) {
@@ -51,10 +63,19 @@ static Vector unitRandom() {
             break;
         }
     }
-    return normalize(randvec);
+    return randvec;
+
+}
+//unit vector3 in random direction
+static Vector unitRandom3() {
+    return normalize(random3());
+}
+//unit vector2 in random direction
+static Vector2 unitRandom2(){
+    return normalize(random2());
 }
 // static Vector hemisphereRandom(const Vector normal) {
-//     Vector randvec = unitRandom();
+//     Vector randvec = unitRandom3();
 //     if (dot(randvec, normal) > 0.f) {
 //         return randvec;
 //     } else {
@@ -97,7 +118,7 @@ void PathTracer::pathTrace() {
         int xsegment = (i % segments);
         Vector2 tileSize = { segmentwidth, segmentHeight };
         Vector2 tileOffset = { xsegment * segmentwidth, ysegment * segmentHeight };
-        threads[i] = std::thread(&PathTracer::pathTraceTile, this, mScene.cameraPos, tileOffset, tileSize, std::ref(finished[i]), config.sampleCount, config.bounceCount);
+        threads[i] = std::thread(&PathTracer::pathTraceTile, this, tileOffset, tileSize, std::ref(finished[i]), config.sampleCount, config.bounceCount);
     }
     for (uint32_t i = 0; i < threadCount; i++) {
         while (!finished[i]) {
@@ -158,24 +179,25 @@ Colourf PathTracer::traceRay(const Vector origin, const Vector direction, const 
     }
     Vector newDirection;
     if (intersectData.material.metalness <= 0.f) {
-        newDirection = normalize(intersectData.normal + unitRandom());
+        newDirection = normalize(intersectData.normal + unitRandom3());
     } else {
         Vector reflected = normalize(reflectRay(normalize(-direction), intersectData.normal));
-        newDirection = reflected + (unitRandom() * (1 - intersectData.material.metalness));
+        newDirection = normalize(reflected + (unitRandom3() * (1 - intersectData.material.metalness)));
     }
     float illum = intersectData.material.illumination;
     return (traceRay(intersectData.point, newDirection, bounceCount - 1) + illum) * color;
 }
-void PathTracer::pathTraceTile(const Vector origin, const Vector2 offset, const Vector2 tileSize, std::atomic_bool &finished, const int SAMPLE_COUNT, const int BOUNCE) {
+void PathTracer::pathTraceTile(const Vector2 offset, const Vector2 tileSize, std::atomic_bool &finished, const int SAMPLE_COUNT, const int BOUNCE) {
     FS::RenderState &renderState = mWindow->getRenderState();
+    const Vector origin = mScene.cameraPos;
     for (int y = offset.y; y < (offset.y + tileSize.y); y++) {
         for (int x = offset.x; x < (offset.x + tileSize.x); x++) {
             FS::Colourf colourf;
             for (int i = 0; i < SAMPLE_COUNT; i++) {
-                float samplex = x + (cubeRandom() - 0.5f);
-                float sampley = y + (cubeRandom() - 0.5f);
-                Vector direction = canvasToViewport(samplex - (renderState.width / 2.f), sampley - (renderState.height / 2.f), renderState);
-                Colourf color = traceRay(origin, direction, BOUNCE);
+                const float samplex = x + (cubeRandom() - 0.5f);
+                const float sampley = y + (cubeRandom() - 0.5f);
+                const Vector direction = canvasToViewport(samplex - (renderState.width / 2.f), sampley - (renderState.height / 2.f), renderState);
+                const Colourf color = traceRay(origin, direction, BOUNCE);
                 colourf.R += (color.R);
                 colourf.G += (color.G);
                 colourf.B += (color.B);

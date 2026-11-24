@@ -32,7 +32,7 @@ class PathTracer {
     // core raytracing
     IntersectionData closestIntersection(const Vector origin, const Vector direction, float min, float max);
     Colourf traceRay(const Vector origin, const Vector direction, const int bounceCount);
-    void pathTraceTile(const Vector origin,const Vector2 offset, const Vector2 tileSize, std::atomic_bool &finished, const int SAMPLE_COUNT, const int BOUNCE);
+    void pathTraceTile(const Vector2 offset, const Vector2 tileSize, std::atomic_bool &finished, const int SAMPLE_COUNT, const int BOUNCE);
     void exportToPPM(uint32_t *buffer, uint32_t width, uint32_t height, const std::string &file);
     void clearScreen(uint32_t color);
 };

@@ -8,7 +8,7 @@
 */
 Scene createScene() {
     Scene scene;
-    constexpr uint32_t NUM_SPHERES = 1000;
+    constexpr uint32_t NUM_SPHERES = 1024;
     scene.spheres.reserve(NUM_SPHERES);
     scene.cameraPos = {0.f,0.f,-100.f};
     // scene.spheres.push_back({
@@ -89,7 +89,7 @@ int main() {
     Scene scene = createScene();
     pathTracer.setScene(scene);
 
-    pathTracer.setConfig({ .sampleCount = 512,
+    pathTracer.setConfig({ .sampleCount = 1024,
                            .bounceCount = 20 });
 
     pathTracer.pathTrace();
