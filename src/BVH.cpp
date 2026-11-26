@@ -2,10 +2,13 @@
 #include "BVH.h"
 #include "Utils.h"
 #include <assert.h>
+#include "Timer.h"
+#include <iostream>
 
 #define LAST_NODE_COUNT 1
 constexpr float epsilon = std::numeric_limits<float>::epsilon();
 void BVH::build(Scene &scene) {
+    Timer timer;
     if (visualize) {
         visualizationAABB.reserve(2 * scene.spheres.size() - 1);
     }
@@ -18,6 +21,8 @@ void BVH::build(Scene &scene) {
     }
     updateAABB(root);
     subdivide(root);
+    timer.stop();
+    std::cout << "Building BVH took " << timer.diff << " ms\n";
 }
 IntersectionData BVH::lookup(const Vector origin, const Vector direction, float min, float max, BVHNode *node) {
     static const IntersectionData noIntersection = {

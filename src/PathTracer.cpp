@@ -124,12 +124,12 @@ void PathTracer::pathTrace() {
         while (!finished[i]) {
             window.swapBuffers();
             window.processMessages();
-            std::this_thread::sleep_for(std::chrono::milliseconds(16));
+            std::this_thread::sleep_for(std::chrono::milliseconds(32));
         }
         threads[i].join();
     }
     timer.stop();
-    std::cout << "Rendered, took : " << timer.diff << " ms\n";
+    std::cout << "Path tracing took : " << timer.diff << " ms\n";
 }
 void PathTracer::update() {
     handleInput();
