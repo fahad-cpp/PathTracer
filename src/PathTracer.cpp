@@ -71,7 +71,7 @@ static Vector unitRandom3() {
     return normalize(random3());
 }
 //unit vector2 in random direction
-static Vector2 unitRandom2(){
+[[maybe_unused]] static Vector2 unitRandom2(){
     return normalize(random2());
 }
 // static Vector hemisphereRandom(const Vector normal) {

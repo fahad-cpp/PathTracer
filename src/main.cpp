@@ -88,7 +88,7 @@ int main() {
 
     PathTracer pathTracer("Path Tracer", width, height);
     Scene scene = createScene();
-    pathTracer.setConfig({ .sampleCount = 4096,
+    pathTracer.setConfig({ .sampleCount = 20,
                            .bounceCount = 20 });
 
     pathTracer.setScene(scene);
