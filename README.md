@@ -7,6 +7,7 @@ Path Tracer that runs on CPU in C++.
 - 23/11/26 fixed BVH construction, updated FSWindow, remove hardcoded camera , made 1kballs scene
 
 ![1kballs](renders/1kballs.png)<br>
+![1kballsnight](renders/1kballsnight.png)<br>
 ![LightBall](renders/lightball.png)<br>
 ![LightBall](renders/lightballwide.png)<br>
 ![Glowing Ball](renders/glow.png)<br>

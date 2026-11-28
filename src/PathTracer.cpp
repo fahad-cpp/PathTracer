@@ -7,7 +7,7 @@
 #include <thread>
 
 // Day sky
-#if 1
+#if 0
 Colourf skycolor1 = { 1, 1, 1 };
 Colourf skycolor2 = { 0.5f, 0.7f, 1 };
 #else

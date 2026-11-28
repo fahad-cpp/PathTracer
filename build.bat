@@ -1,5 +1,5 @@
 @echo off
-set "PRESET=clang-debug"
+set "PRESET=clang-release"
 if exist build\%PRESET%\PathTracer.exe del build\%PRESET%\PathTracer.exe
 cmake --preset %PRESET% >nul
 cmake --build --preset %PRESET% 2>nul
