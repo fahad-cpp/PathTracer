@@ -5,7 +5,6 @@
     TODO:
     -Glass material (refractive)
     -Focus blur
-    -BVH
 */
 Scene createScene() {
     Scene scene;
